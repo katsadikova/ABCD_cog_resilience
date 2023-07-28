@@ -53,5 +53,3 @@ d_kclu <- cbind(d2,kcluster)
 
 #Plot the clusters
 fviz_cluster(kclu, d_kclu, ellipse.type = "norm")
-
-cohen.kappa(tab_kclu)  

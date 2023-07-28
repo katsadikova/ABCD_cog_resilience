@@ -22,60 +22,212 @@ library(corrplot)
 library(reshape2)
 library(mclust)
 library(mlogit)
+library(tidyLPA)
 
 load("/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/temp_dat/dat.Rda")
 
 #-- Exclude rows with missing data (for now)
-dat <- na.omit(dat)
+dat <- na.omit(dat[,c(1,5,8:15)]) %>%
+  mutate(fluid_s = as.numeric(scale(nihtbx_fluidcomp_agecorrected)),
+         cryst_s = as.numeric(scale(nihtbx_cryst_agecorrected)),
+         totcomp_s = as.numeric(scale(nihtbx_totalcomp_agecorrected)))  
 names(dat)
+
+summary(dat$adi_s)
 
 #-- Look at simple correlations
 vars <- names(dat)[2:7]
 cor(dat[,2:7])
 
+
+#-----------------------------------------------------------------------#
+#--- Use tidyLPA to compare estimates from several cluster solutions ---#
+#-----------------------------------------------------------------------#
+
+#-- tidyLPA with estimation using mclust can run 4 models:
+#--------------------------------------------------------
+# 1. Equal variances, and covariances fixed to 0 (model 1)
+# 2. Varying variances and covariances fixed to 0 (model 2)
+# 3. Equal variances and equal covariances (model 3)
+# ONLY MPLUS: 4. Varying means, varying variances, and equal covariances (model 4)
+# ONLY MPLUS: 5. Varying means, equal variances, and varying covariances (model 5)
+# 6. Varying variances and varying covariances (model 6)
+
+set.seed(123)
+
+allSES <- dat %>% select(fluid_s, cryst_s, totcomp_s, inr_s, p_ed_s, adi_s) %>%
+        single_imputation() %>%
+        estimate_profiles(2:8,
+                          variances = c("equal", "varying"),
+                          covariances = c("zero", "varying")) 
+save(allSES, file="/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/results/allSES.Rda")
+
+fit_stats_allSES <- get_fit(allSES)
+write.csv(fit_stats_allSES, file="/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/results/fit_stats_allSES.csv")
+compare_fit_allSES <- compare_solutions(allSES,statistics = c("AIC", "BIC"))
+compare_fit_allSES
+
+#- Model 6, 8 clusters
+plot_profiles(allSES$model_6_class_8, add_line = T, bw=F)
+check <- get_data(allSES$model_6_class_8)
+summary(as.factor(check$Class))
+
+#- Model 6, 7 clusters
+plot_profiles(allSES$model_6_class_7, add_line = T, bw=F)
+check <- get_data(allSES$model_6_class_7)
+summary(as.factor(check$Class))
+
+#- Model 6, 6 clusters
+plot_profiles(allSES$model_6_class_6, add_line = T, bw=F)
+check <- get_data(allSES$model_6_class_6)
+summary(as.factor(check$Class))
+
+#- Model 6, 5 clusters
+plot_profiles(allSES$model_6_class_5, add_line = T, bw=F)
+check <- get_data(allSES$model_6_class_5)
+summary(as.factor(check$Class))
+
+
+names(dat)
+mclust_BIC_allSES <- mclustBIC(dat[,c(8:13)])
+summary(mclust_BIC_allSES) # Maxing out cluster space - not stable
+
+#-------------------------------------------------------------------------------
+hhSES <- dat %>% select(fluid_s, cryst_s, totcomp_s, inr_s, p_ed_s) %>%
+  single_imputation() %>%
+  estimate_profiles(2:8,
+                    variances = c("equal", "varying"),
+                    covariances = c("zero", "varying")) 
+save(hhSES, file="/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/results/hhSES.Rda")
+
+fit_stats_hhSES <- get_fit(hhSES)
+write.csv(fit_stats_hhSES, file="/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/results/fit_stats_hhSES.csv")
+compare_fit_hhSES <- compare_solutions(hhSES,statistics = c("AIC", "BIC"))
+compare_fit_hhSES # Model 6 with 7 clusters best, doesn't converge at all with 8
+
+#- Model 6, 7 clusters
+plot_profiles(hhSES$model_6_class_7, add_line = T, bw=F)
+check <- get_data(hhSES$model_6_class_7)
+summary(as.factor(check$Class))
+
+#- Model 6, 6 clusters
+plot_profiles(hhSES$model_6_class_6, add_line = T, bw=F)
+check <- get_data(hhSES$model_6_class_6)
+summary(as.factor(check$Class))
+
+#- Model 6, 5 clusters
+plot_profiles(hhSES$model_6_class_5, add_line = T, bw=F)
+check <- get_data(hhSES$model_6_class_5)
+summary(as.factor(check$Class))
+
+#- Model 6, 4 clusters
+plot_profiles(hhSES$model_6_class_4, add_line = T, bw=F)
+check <- get_data(hhSES$model_6_class_4)
+summary(as.factor(check$Class))
+
+mclust_BIC_hhSES <- mclustBIC(dat[,c(8,9,11:13)])
+summary(mclust_BIC_hhSES) # More stable - suggests 8-cluster solution VVE
+
+#-------------------------------------------------------------------------------
+inrSES <- dat %>% select(fluid_s, cryst_s, totcomp_s, inr_s) %>%
+  single_imputation() %>%
+  estimate_profiles(2:8,
+                    variances = c("equal", "varying"),
+                    covariances = c("zero", "varying")) 
+save(inrSES, file="/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/results/inrSES.Rda")
+
+fit_stats_inrSES <- get_fit(inrSES)
+write.csv(fit_stats_inrSES, file="/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/results/fit_stats_inrSES.csv")
+compare_fit_inrSES <- compare_solutions(inrSES,statistics = c("AIC", "BIC"))
+compare_fit_inrSES
+
+#- Model 6, 6 clusters
+plot_profiles(inrSES$model_6_class_6, add_line = T, bw=F)
+check <- get_data(inrSES$model_6_class_6)
+summary(as.factor(check$Class))
+
+#- Model 6, 5 clusters
+plot_profiles(inrSES$model_6_class_5, add_line = T, bw=F)
+check <- get_data(inrSES$model_6_class_5)
+summary(as.factor(check$Class))
+
+#- Model 6, 4 clusters
+plot_profiles(inrSES$model_6_class_4, add_line = T, bw=F)
+check <- get_data(inrSES$model_6_class_4)
+summary(as.factor(check$Class))
+
+
+#-------------------------------------------------------------------------------
+noSES <- dat %>% select(fluid_s, cryst_s, totcomp_s) %>%
+  single_imputation() %>%
+  estimate_profiles(2:8,
+                    variances = c("equal", "varying"),
+                    covariances = c("zero", "varying")) 
+save(noSES, file="/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/results/noSES_tidyLPA.Rda")
+fit_stats_noSES <- get_fit(noSES)
+write.csv(fit_stats_noSES, file="/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/results/fit_stats_noSES.csv")
+compare_fit_noSES <- compare_solutions(noSES,statistics = c("AIC", "BIC"))
+compare_fit_noSES
+
+#-------------------------------------------------------------------------------
+onlySES <- dat %>% select(inr_s, p_ed_s, adi_s) %>%
+  single_imputation() %>%
+  estimate_profiles(2:8,
+                    variances = c("equal", "varying"),
+                    covariances = c("zero", "varying")) 
+save(onlySES, file="/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/results/onlySES_tidyLPA.Rda")
+fit_stats_onlycog <- get_fit(onlySES)
+compare_fit_onlySES <- compare_solutions(onlySES,statistics = c("AIC", "BIC"))
+compare_fit_onlySES
+
+
+
 #-------------------------------------------------------------------------------------------------#
 #--- Compare the BIC statistics from the 14 models (3 dimensions - volume, shape, orientation) ---#
 #-------------------------------------------------------------------------------------------------#
+
+names(dat)
+
 set.seed(123)
-BIC <- mclustBIC(dat[,c(2:7)])
+BIC <- mclustBIC(dat[,c(8,11:13)])
 summary(BIC)
+plot(BIC)
 
 #---------------------------#
 #--- Fit the VVV,9 model ---#
 #---------------------------#
-mod1 <- Mclust(dat[,c(2:7)], modelNames = "VVV", G = 9, x = BIC)
+mod1 <- Mclust(dat[,c(8,11:13)], modelNames = "VVE", G = 6, x = BIC)
 
 #-------------------------------------------------------------------------------------#
 #--- Save the parameter means for VVE,9 for profiles involving both SES & neurocog ---#
 #-------------------------------------------------------------------------------------#
+mod1$parameters$mean
 clusters <- data.frame(mod1$parameters$mean) %>%
   rownames_to_column() %>%
   rename(Phenotype = rowname) 
 
-clusters
+summary(as.factor(mod1$classification))
 
 write.csv(clusters, file="/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/results/LPA_clusters_SES_cog.csv")
 
 
 clusters<-clusters%>%
-  pivot_longer(cols = c(X1, X2, X3, X4, X5, X6, X7, X8, X9), names_to = "Profile", values_to = "Mean") %>%
+  pivot_longer(cols = c(X1, X2, X3, X4, X5, X6), names_to = "Profile", values_to = "Mean") %>%
   mutate(Mean = round(Mean, 2)) %>%
   mutate(
-    lp_cat = case_when(Profile=="X9"~"Profile 9",
-                       Profile=="X8"~"Profile 8",
-                       Profile=="X7"~"Profile 7",
+    lp_cat = case_when(Profile=="X7"~"Profile 7",
                        Profile=="X6"~"Profile 6",
                        Profile=="X5"~"Profile 5",
                        Profile=="X4"~"Profile 4",
                        Profile=="X3"~"Profile 3",
                        Profile=="X2"~"Profile 2",
                        Profile=="X1"~"Profile 1"),
-    phen = case_when(Phenotype=="inr" ~ "Income-to-Needs Ratio",
-                     Phenotype=="p_ed" ~ "Parental Education",
-                     Phenotype=="reshist_addr1_adi_perc" ~ "Area Deprivation Index for the primary residence",
-                     Phenotype=="nihtbx_fluidcomp_agecorrected" ~ "NIH Toolbox: Age-Corrected Fluid Intelligence Composite",
-                     Phenotype=="nihtbx_cryst_agecorrected" ~ "NIH Toolbox: Age-Corrected Crystallized Intelligence Composite",
-                     Phenotype=="nihtbx_totalcomp_agecorrected" ~ "NIH Toolbox: Age-Corrected Total Intelligence Composite"
+    phen = case_when(Phenotype=="inr_s" ~ "Income-to-Needs Ratio",
+                     Phenotype=="p_ed_s" ~ "Parental Education",
+                     Phenotype=="adi_s" ~ "Area Deprivation Index for the primary residence",
+                     Phenotype=="fluid_s" ~ "NIH Toolbox: Age-Corrected Fluid Intelligence Composite",
+                     Phenotype=="cryst_s" ~ "NIH Toolbox: Age-Corrected Crystallized Intelligence Composite",
+                     Phenotype=="totcomp_s" ~ "NIH Toolbox: Age-Corrected Total Intelligence Composite"
     ))
 
 
