@@ -86,7 +86,11 @@ abcd_p_demo$p_ed = rowMeans(cbind(abcd_p_demo$demo_prnt_ed_v2,abcd_p_demo$demo_p
 
 #-- Pull in neighborhood SES (ADI at the primary residential address)
 led_l_adi <- read.csv("./linked-external-data/led_l_adi.csv") %>%
-  dplyr::select(src_subject_id, reshist_addr1_adi_perc)
+  dplyr::select(src_subject_id, reshist_addr1_adi_perc) %>%
+  # Create a reverse-coded ADI variable
+  mutate(
+    reshist_addr1_adi_perc_r = 101-reshist_addr1_adi_perc
+  )
 
 
 #-- Pull in cognitive function variables
@@ -99,7 +103,8 @@ data_list <- list(abcd_p_demo, led_l_adi, cog)
 dat <- Reduce(function(x, y) merge(x, y, by="src_subject_id", all=TRUE),data_list) %>%
   mutate(inr_s = as.numeric(scale(inr)),
          p_ed_s = as.numeric(scale(p_ed)),
-         adi_s = as.numeric(scale(reshist_addr1_adi_perc)))  
+         #-- Standardize the reverse-coded ADI variable
+         adi_s = as.numeric(scale(reshist_addr1_adi_perc_r)))  
 
 hist(dat$inr)
 hist(dat$inr_s)
@@ -158,7 +163,7 @@ table_by_pov <- data.frame(table_by_pov) %>%
     rownames = case_when(
       Characteristic=="inr_s (mean (SD))" ~ "Standardized income-to-needs ratio (mean (SD))",
       Characteristic=="p_ed_s (mean (SD))" ~ "Standardized parental education - highest among parents/caretakers (mean (SD))",
-      Characteristic=="adi_s (mean (SD))" ~ "Standardized ADI for the primary residence (mean (SD))",
+      Characteristic=="adi_s (mean (SD))" ~ "Standardized reverse-coded ADI for the primary residence (mean (SD))",
       Characteristic=="nihtbx_fluidcomp_agecorrected (mean (SD))" ~ "NIH toolbox: fluid intelligence composite, age corrected (mean (SD))",
       Characteristic=="nihtbx_cryst_agecorrected (mean (SD))" ~ "NIH toolbox: crystallized intelligence composite, age corrected (mean (SD))",
       Characteristic=="nihtbx_totalcomp_agecorrected (mean (SD))" ~ "NIH toolbox: total intelligence composite, age corrected (mean (SD))",

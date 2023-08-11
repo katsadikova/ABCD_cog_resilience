@@ -27,13 +27,13 @@ library(tidyLPA)
 load("/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/temp_dat/dat.Rda")
 
 #-- Exclude rows with missing data (for now)
-dat <- na.omit(dat[,c(1,5,8:15)]) %>%
+dat <- na.omit(dat[,c(1,5,8:16)]) %>%
   mutate(fluid_s = as.numeric(scale(nihtbx_fluidcomp_agecorrected)),
          cryst_s = as.numeric(scale(nihtbx_cryst_agecorrected)),
          totcomp_s = as.numeric(scale(nihtbx_totalcomp_agecorrected)))  
 names(dat)
 
-summary(dat$adi_s)
+summary(as.numeric(dat$adi_s))
 
 #-- Look at simple correlations
 vars <- names(dat)[2:7]
@@ -155,6 +155,159 @@ summary(as.factor(check$Class))
 plot_profiles(inrSES$model_6_class_4, add_line = T, bw=F)
 check <- get_data(inrSES$model_6_class_4)
 summary(as.factor(check$Class))
+
+
+#-------------------------------------------------------------------------------
+#-- Drop Total Cog, include all 3 SES indicators
+
+allSES_notot <- dat %>% select(fluid_s, cryst_s, inr_s, p_ed_s, adi_s) %>%
+  single_imputation() %>%
+  estimate_profiles(2:8,
+                    variances =   c("equal", "varying", "equal", "varying"),
+                    covariances = c("zero",  "zero",    "equal", "varying")) 
+save(allSES_notot, file="/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/results/allSES_notot.Rda")
+
+fit_stats_allSES_notot <- get_fit(allSES_notot)
+write.csv(fit_stats_allSES_notot, file="/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/results/fit_stats_allSES_notot.csv")
+compare_fit_allSES_notot <- compare_solutions(allSES_notot,statistics = c("AIC", "BIC"))
+compare_fit_allSES_notot
+
+#- Model 6, 8 clusters
+plot_profiles(allSES_notot$model_6_class_8, add_line = T, bw=F)
+check <- get_data(allSES_notot$model_6_class_8)
+summary(as.factor(check$Class))
+# vars <- names(check)[c(3:7)]
+# table_by_pov <- CreateTableOne(vars = vars,
+#                                strata = c("Class"), 
+#                                includeNA = F, 
+#                                addOverall = T,
+#                                data = check)
+# 
+# table_by_pov
+
+#- Model 6, 7 clusters
+plot_profiles(allSES_notot$model_6_class_7, add_line = T, bw=F)
+check <- get_data(allSES_notot$model_6_class_7)
+summary(as.factor(check$Class))
+
+#- Model 6, 6 clusters
+plot_profiles(allSES_notot$model_6_class_6, add_line = T, bw=F)
+check <- get_data(allSES_notot$model_6_class_6)
+summary(as.factor(check$Class))
+
+#-------------------------------------------------------------------------------
+#-- Drop Total Cog, include HH SES indicators
+
+hhSES_notot <- dat %>% select(fluid_s, cryst_s, inr_s, p_ed_s) %>%
+  single_imputation() %>%
+  estimate_profiles(2:8,
+                    variances =   c("equal", "varying", "equal", "varying"),
+                    covariances = c("zero",  "zero",    "equal", "varying")) 
+save(hhSES_notot, file="/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/results/hhSES_notot.Rda")
+
+fit_stats_hhSES_notot <- get_fit(hhSES_notot)
+write.csv(fit_stats_hhSES_notot, file="/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/results/fit_stats_hhSES_notot.csv")
+compare_fit_hhSES_notot <- compare_solutions(hhSES_notot,statistics = c("AIC", "BIC"))
+compare_fit_hhlSES_notot
+
+#- Model 6, 8 clusters
+plot_profiles(hhSES_notot$model_6_class_8, add_line = T, bw=F)
+check <- get_data(hhSES_notot$model_6_class_8)
+summary(as.factor(check$Class))
+
+#- Model 6, 6 clusters
+plot_profiles(hhSES_notot$model_6_class_6, add_line = T, bw=F)
+check <- get_data(hhSES_notot$model_6_class_6)
+summary(as.factor(check$Class))
+
+#-------------------------------------------------------------------------------
+#-- Drop Total Cog, include all only INR 
+
+inrSES_notot <- dat %>% select(fluid_s, cryst_s, inr_s) %>%
+  single_imputation() %>%
+  estimate_profiles(2:8,
+                    variances =   c("equal", "varying", "equal", "varying"),
+                    covariances = c("zero",  "zero",    "equal", "varying")) 
+save(inrSES_notot, file="/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/results/inrSES_notot.Rda")
+
+fit_stats_inrSES_notot <- get_fit(inrSES_notot)
+write.csv(fit_stats_inrSES_notot, file="/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/results/fit_stats_inrSES_notot.csv")
+compare_fit_inrSES_notot <- compare_solutions(inrSES_notot,statistics = c("AIC", "BIC"))
+compare_fit_inrSES_notot
+
+#- Model 6, 8 clusters
+plot_profiles(inrSES_notot$model_6_class_8, add_line = T, bw=F)
+check <- get_data(inrSES_notot$model_6_class_8)
+summary(as.factor(check$Class))
+
+#- Model 2, 8 clusters
+plot_profiles(inrSES_notot$model_2_class_8, add_line = T, bw=F)
+check <- get_data(inrSES_notot$model_2_class_8)
+summary(as.factor(check$Class))
+
+
+#-------------------------------------------------------------------------------
+#-- Keep Only Total Cog, include all 3 SES indicators
+
+allSES_tot <- dat %>% select(totcomp_s, inr_s, p_ed_s, adi_s) %>%
+  single_imputation() %>%
+  estimate_profiles(2:8,
+                    variances =   c("equal", "varying", "equal", "varying"),
+                    covariances = c("zero",  "zero",    "equal", "varying")) 
+save(allSES_tot, file="/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/results/allSES_tot.Rda")
+
+fit_stats_allSES_tot <- get_fit(allSES_tot)
+write.csv(fit_stats_allSES_tot, file="/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/results/fit_stats_allSES_tot.csv")
+compare_fit_allSES_tot <- compare_solutions(allSES_tot,statistics = c("AIC", "BIC"))
+compare_fit_allSES_tot
+
+#- Model 6, 8 clusters
+plot_profiles(allSES_tot$model_6_class_8, add_line = T, bw=F)
+check <- get_data(allSES_tot$model_6_class_8)
+summary(as.factor(check$Class))
+
+#- Model 6, 7 clusters
+plot_profiles(allSES_tot$model_6_class_7, add_line = T, bw=F)
+check <- get_data(allSES_tot$model_6_class_7)
+summary(as.factor(check$Class))
+
+#- Model 6, 6 clusters
+plot_profiles(allSES_tot$model_6_class_6, add_line = T, bw=F)
+check <- get_data(allSES_tot$model_6_class_6)
+summary(as.factor(check$Class))
+
+
+#-------------------------------------------------------------------------------
+#-- Keep Only Total Cog, include all 3 SES indicators
+
+inrSES_tot <- dat %>% select(totcomp_s, inr_s) %>%
+  single_imputation() %>%
+  estimate_profiles(2:8,
+                    variances =   c("equal", "varying", "equal", "varying"),
+                    covariances = c("zero",  "zero",    "equal", "varying")) 
+save(inrSES_tot, file="/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/results/inrSES_tot.Rda")
+
+fit_stats_inrSES_tot <- get_fit(inrSES_tot)
+write.csv(fit_stats_inrSES_tot, file="/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/results/fit_stats_inrSES_tot.csv")
+compare_fit_inrSES_tot <- compare_solutions(inrSES_tot,statistics = c("AIC", "BIC"))
+compare_fit_inrSES_tot
+
+#- Model 6, 5 clusters
+plot_profiles(inrSES_tot$model_6_class_5, add_line = T, bw=F)
+check <- get_data(inrSES_tot$model_6_class_5)
+summary(as.factor(check$Class))
+
+#- Model 6, 7 clusters
+plot_profiles(allSES_tot$model_6_class_7, add_line = T, bw=F)
+check <- get_data(allSES_tot$model_6_class_7)
+summary(as.factor(check$Class))
+
+#- Model 6, 6 clusters
+plot_profiles(allSES_tot$model_6_class_6, add_line = T, bw=F)
+check <- get_data(allSES_tot$model_6_class_6)
+summary(as.factor(check$Class))
+
+
 
 
 #-------------------------------------------------------------------------------
