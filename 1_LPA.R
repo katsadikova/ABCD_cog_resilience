@@ -229,6 +229,7 @@ inrSES_notot <- dat %>% select(fluid_s, cryst_s, inr_s) %>%
                     variances =   c("equal", "varying", "equal", "varying"),
                     covariances = c("zero",  "zero",    "equal", "varying")) 
 save(inrSES_notot, file="/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/results/inrSES_notot.Rda")
+load(file="/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/results/inrSES_notot.Rda")
 
 fit_stats_inrSES_notot <- get_fit(inrSES_notot)
 write.csv(fit_stats_inrSES_notot, file="/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/results/fit_stats_inrSES_notot.csv")
@@ -278,7 +279,7 @@ summary(as.factor(check$Class))
 
 
 #-------------------------------------------------------------------------------
-#-- Keep Only Total Cog, include all 3 SES indicators
+#-- Keep Only Total Cog, include only INR
 
 inrSES_tot <- dat %>% select(totcomp_s, inr_s) %>%
   single_imputation() %>%
@@ -286,6 +287,7 @@ inrSES_tot <- dat %>% select(totcomp_s, inr_s) %>%
                     variances =   c("equal", "varying", "equal", "varying"),
                     covariances = c("zero",  "zero",    "equal", "varying")) 
 save(inrSES_tot, file="/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/results/inrSES_tot.Rda")
+load(file="/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/results/inrSES_tot.Rda")
 
 fit_stats_inrSES_tot <- get_fit(inrSES_tot)
 write.csv(fit_stats_inrSES_tot, file="/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/results/fit_stats_inrSES_tot.csv")
@@ -297,14 +299,14 @@ plot_profiles(inrSES_tot$model_6_class_5, add_line = T, bw=F)
 check <- get_data(inrSES_tot$model_6_class_5)
 summary(as.factor(check$Class))
 
-#- Model 6, 7 clusters
-plot_profiles(allSES_tot$model_6_class_7, add_line = T, bw=F)
-check <- get_data(allSES_tot$model_6_class_7)
+#- Model 6, 4 clusters
+plot_profiles(inrSES_tot$model_6_class_4, add_line = T, bw=F)
+check <- get_data(inrSES_tot$model_6_class_4)
 summary(as.factor(check$Class))
 
-#- Model 6, 6 clusters
-plot_profiles(allSES_tot$model_6_class_6, add_line = T, bw=F)
-check <- get_data(allSES_tot$model_6_class_6)
+#- Model 6, 3 clusters
+plot_profiles(inrSES_tot$model_6_class_3, add_line = T, bw=F)
+check <- get_data(inrSES_tot$model_6_class_3)
 summary(as.factor(check$Class))
 
 
