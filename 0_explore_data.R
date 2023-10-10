@@ -84,6 +84,10 @@ abcd_p_demo <- read.csv("./abcd-general/abcd_p_demo.csv") %>%
 #-- Create an average of parental education (if the parent has a partner)
 abcd_p_demo$p_ed = rowMeans(cbind(abcd_p_demo$demo_prnt_ed_v2,abcd_p_demo$demo_prtnr_ed_v2), na.rm=TRUE)
 
+#-- Fill in parent's education level for missing partner education
+abcd_p_demo$demo_prtnr_ed_v2_imp <- ifelse(is.na(abcd_p_demo$demo_prtnr_ed_v2),abcd_p_demo$demo_prnt_ed_v2,abcd_p_demo$demo_prtnr_ed_v2)
+
+
 #-- Pull in neighborhood SES (ADI at the primary residential address)
 led_l_adi <- read.csv("./linked-external-data/led_l_adi.csv") %>%
   dplyr::select(src_subject_id, reshist_addr1_adi_perc) %>%
