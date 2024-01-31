@@ -30,14 +30,21 @@ setwd("/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/release5/core/
 
 #-- The starting data set
 load("/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/temp_dat/dat.Rda")
+names(dat)
 
+#-- Look at how sample was constructed - first remove those missing INR, then missing cog
+nonmissINR <- na.omit(dat[,c(1,5)]) %>% dplyr::select(src_subject_id)
+dat_nonmissINR <- merge(nonmissINR,dat,by="src_subject_id",all.x=T)
+quantile(dat_nonmissINR$inr, c(0.33,0.67),na.rm=T)
+dat_nonmissINR_low <- dat_nonmissINR %>% filter(inr<2.064653)
+dat_nonmissINRcog_low <- na.omit(dat_nonmissINR_low[,c(1,11:13)])
 
-dat <- na.omit(dat[,c(1,5,8:13)]) %>%
+#-- Pull in data core - INR & cog
+dat <- na.omit(dat[,c(1,5,11:13)]) %>% #originally, na.omit(dat[,c(1,5,8:13)])
   mutate(fluid_s = as.numeric(scale(nihtbx_fluidcomp_agecorrected)),
          cryst_s = as.numeric(scale(nihtbx_cryst_agecorrected)),
          totcomp_s = as.numeric(scale(nihtbx_totalcomp_agecorrected))
   ) %>%
-  
   # New mutate to get distributions of INR/cog variables in data with missing rows dropped
   mutate(
     #inr_quart = factor(Hmisc::cut2(inr, g = 4), labels = c(1:4)),
@@ -90,12 +97,14 @@ dat <- na.omit(dat[,c(1,5,8:13)]) %>%
     welloff3_highcrcog = ifelse(inr_tert==3 & nihtbx_cryst_agecorrected>mean(nihtbx_cryst_agecorrected,na.rm=T), 1, 0),
     #-- Identify those who are in top tertile of INR, and below average on crystallized cog
     welloff3_lowcrcog = ifelse(inr_tert==3 & nihtbx_cryst_agecorrected<=mean(nihtbx_cryst_agecorrected,na.rm=T), 1, 0)
-    
   )
+names(dat)
+
+quantile(dat$inr, c(0.33,0.67))
 
 abcd_y_lt <- read.csv("./abcd-general/abcd_y_lt.csv") %>%
   filter(eventname=="baseline_year_1_arm_1") %>%
-  dplyr::select(src_subject_id, rel_family_id)
+  dplyr::select(src_subject_id, rel_family_id, interview_age)
 
 #-- School functioning
 ce_y_srpf <- read.csv("./culture-environment/ce_y_srpf.csv") %>%
@@ -154,6 +163,11 @@ led_l_coi <- read.csv("./linked-external-data/led_l_coi.csv") %>%
                 reshist_addr1_coi_se_mhe,reshist_addr1_coi_se_povrate,
                 reshist_addr1_coi_se_public,reshist_addr1_coi_se_single)
 
+#-- ADI at the primary residential address
+led_l_adi <- read.csv("./linked-external-data/led_l_adi.csv") %>%
+  #-- Select baseline visit
+  filter(eventname=="baseline_year_1_arm_1") %>%
+  dplyr::select(src_subject_id, reshist_addr1_adi_perc)
 
 #-- Urbanization
 led_l_denspop <- read.csv("./linked-external-data/led_l_denspop.csv") %>%
@@ -263,6 +277,29 @@ abcd_p_demo <- read.csv("./abcd-general/abcd_p_demo.csv") %>%
           demo_prnt_marital_v2 %in% c(1,6) ~ 1,
           demo_prnt_marital_v2 == 777 ~ NA_real_,
           T~0),
+         
+         demo_prnt_ed_v2 = case_when(demo_prnt_ed_v2==13 ~ 12,
+                                     demo_prnt_ed_v2==14 ~ 12,
+                                     demo_prnt_ed_v2==15 ~ 14,
+                                     demo_prnt_ed_v2==16 ~ 14,
+                                     demo_prnt_ed_v2==17 ~ 14,
+                                     demo_prnt_ed_v2==18 ~ 16,
+                                     demo_prnt_ed_v2==19 ~ 18,
+                                     demo_prnt_ed_v2==20 ~ 20,
+                                     demo_prnt_ed_v2==21 ~ 22,
+                                     demo_prnt_ed_v2==777 ~ NA_real_,
+                                     T~demo_prnt_ed_v2),
+         demo_prtnr_ed_v2 = case_when(demo_prtnr_ed_v2==13 ~ 12,
+                                      demo_prtnr_ed_v2==14 ~ 12,
+                                      demo_prtnr_ed_v2==15 ~ 14,
+                                      demo_prtnr_ed_v2==16 ~ 14,
+                                      demo_prtnr_ed_v2==17 ~ 14,
+                                      demo_prtnr_ed_v2==18 ~ 16,
+                                      demo_prtnr_ed_v2==19 ~ 18,
+                                      demo_prtnr_ed_v2==20 ~ 20,
+                                      demo_prtnr_ed_v2==21 ~ 22,
+                                      demo_prtnr_ed_v2 %in% c(777,999) ~ NA_real_,
+                                      T~demo_prtnr_ed_v2),
          across(c(demo_fam_exp1_v2,demo_fam_exp2_v2,
                   demo_fam_exp3_v2, demo_fam_exp4_v2,
                   demo_fam_exp5_v2,demo_fam_exp6_v2,demo_fam_exp7_v2),
@@ -272,7 +309,7 @@ abcd_p_demo <- read.csv("./abcd-general/abcd_p_demo.csv") %>%
                 demo_fam_exp1_v2,demo_fam_exp2_v2,
                 demo_fam_exp3_v2, demo_fam_exp4_v2,
                 demo_fam_exp5_v2,demo_fam_exp6_v2,demo_fam_exp7_v2)
-summary(as.factor(abcd_p_demo$demo_fam_exp1_v2))
+summary(as.factor(abcd_p_demo$demo_prnt_ed_v2))
 
 #-- Adversity - Physical abuse - broad psychopathology, KSADS - post-traumatic stress disorder (indiv. Questions)
 mh_p_ksads_ptsd <- read.csv("./mental-health/mh_p_ksads_ptsd.csv") %>%
@@ -359,6 +396,9 @@ ph_p_dhx <- read.csv("./physical-health/ph_p_dhx.csv") %>%
   filter(eventname=="baseline_year_1_arm_1")  %>%
   mutate(
     birth_weight = birth_weight_lbs+birth_weight_oz/16,
+    #-- Windsorize birth_weight & breastfeeding to 99th percentile (10.25lb. & 36mo, respectively) 
+    birth_weight = ifelse(birth_weight>10.25,10.25,birth_weight),
+    devhx_18_p = ifelse(devhx_18_p>36,36,devhx_18_p),
     devhx_4_p = case_when(
       devhx_4_p==332 ~ 32,
       devhx_4_p==389 ~ 39,
@@ -380,6 +420,10 @@ ph_p_dhx <- read.csv("./physical-health/ph_p_dhx.csv") %>%
       devhx_8_coc_crack==1 | devhx_8_her_morph==1 | devhx_8_oxycont==1 | devhx_8_other_drugs==1 | devhx_9_coc_crack==1 | devhx_9_her_morph==1 | devhx_9_oxycont==1 | devhx_9_other_drugs==1 ~ 1,
       T ~ 0
     ),
+    preg_any_subst = case_when(
+      preg_tobacco == 1 | preg_alcohol == 1 | preg_marijuana == 1 | preg_other_drug == 1 ~ 1,
+      T ~ 0
+    ),
     preg_caffeine = case_when(
       devhx_caffeine_11 == 1 | devhx_caffeine_11 == 2 | devhx_caffeine_11 == 3 ~ 1,
       T ~ 0
@@ -397,23 +441,18 @@ ph_p_dhx <- read.csv("./physical-health/ph_p_dhx.csv") %>%
     across(c(devhx_8_prescript_med,devhx_9_prescript_med,devhx_6_p,devhx_10,devhx_12a_p,devhx_22_3_p),
                 ~ dplyr::recode(.,`999`=NA_real_,`1`=1,`0`=0, `-1`=NA_real_, .default = NaN))) %>%
   dplyr::select(src_subject_id, birth_weight, devhx_3_p, devhx_4_p,
-                devhx_6_p, preg_tobacco, preg_alcohol, preg_marijuana, 
-                preg_other_drug, devhx_10, 
+                devhx_6_p, preg_any_subst, devhx_10, 
                 preg_caffeine, birth_complications,
                 devhx_13_3_p,devhx_18_p)
                 # Dropped premature birth, fever/infection, motor/speech dev, bed-wetting (10/6)
                 # devhx_12a_p,devhx_16_p,devhx_17_p,
                 # late_motor_dev,late_speech_dev,devhx_22_3_p
                 
-names(ph_p_pds)
-summary(as.factor(ph_p_dhx$devhx_13_3_p))
-
 #-- Physical activity - self-reported
 ph_y_yrb <- read.csv("./physical-health/ph_y_yrb.csv") %>%
   #-- Select baseline visit
   filter(eventname=="baseline_year_1_arm_1") %>%
-  dplyr::select(src_subject_id, physical_activity1_y,
-                physical_activity2_y,physical_activity5_y) 
+  dplyr::select(src_subject_id, physical_activity1_y, physical_activity5_y) 
 
 
 #-- Sports and organized activities
@@ -562,20 +601,20 @@ su_y_peerdevia <- read.csv("./substance-use/su_y_peerdevia.csv") %>%
   ) %>%
   dplyr::select(src_subject_id, peer_deviance, some_peer_deviance)
 
-
-#-- Intention to use substances (alcohol/tobacco/marijuana) (youth-reported)
-su_y_path_intuse <- read.csv("./substance-use/su_y_path_intuse.csv") %>%
-  #-- Select baseline visit
-  filter(eventname=="baseline_year_1_arm_1") %>%
-  mutate(across(c(path_alc_youth1:path_alc_youth9),
-                ~ dplyr::recode(.,`6`=NA_real_,`5`=NA_real_,`1`=3,`2`=2,`3`=1,`4`=0, .default = NaN))) %>%
-  mutate(
-    curious_subst = rowSums(select(., c("path_alc_youth1", "path_alc_youth2", "path_alc_youth3")), na.rm = TRUE),
-    tobacco_intension = rowSums(select(., c("path_alc_youth1","path_alc_youth4","path_alc_youth7")), na.rm=TRUE),
-    alc_intension = rowSums(select(., c("path_alc_youth2","path_alc_youth5","path_alc_youth8")), na.rm=TRUE),
-    mj_intension = rowSums(select(., c("path_alc_youth3","path_alc_youth6","path_alc_youth9")), na.rm=TRUE)
-  ) %>%
-  dplyr::select(src_subject_id, curious_subst, tobacco_intension, alc_intension, mj_intension)
+ 
+# #-- Intention to use substances (alcohol/tobacco/marijuana) (youth-reported)
+# su_y_path_intuse <- read.csv("./substance-use/su_y_path_intuse.csv") %>%
+#   #-- Select baseline visit
+#   filter(eventname=="baseline_year_1_arm_1") %>%
+#   mutate(across(c(path_alc_youth1:path_alc_youth9),
+#                 ~ dplyr::recode(.,`6`=NA_real_,`5`=NA_real_,`1`=3,`2`=2,`3`=1,`4`=0, .default = NaN))) %>%
+#   mutate(
+#     curious_subst = rowSums(select(., c("path_alc_youth1", "path_alc_youth2", "path_alc_youth3")), na.rm = TRUE),
+#     tobacco_intension = rowSums(select(., c("path_alc_youth1","path_alc_youth4","path_alc_youth7")), na.rm=TRUE),
+#     alc_intension = rowSums(select(., c("path_alc_youth2","path_alc_youth5","path_alc_youth8")), na.rm=TRUE),
+#     mj_intension = rowSums(select(., c("path_alc_youth3","path_alc_youth6","path_alc_youth9")), na.rm=TRUE)
+#   ) %>%
+#   dplyr::select(src_subject_id, curious_subst, tobacco_intension, alc_intension, mj_intension)
 
 
 
@@ -584,7 +623,7 @@ su_y_path_intuse <- read.csv("./substance-use/su_y_path_intuse.csv") %>%
 data_list <- list()
 data_list <- append(data_list, list(dat,abcd_y_lt,ce_y_srpf,ce_p_nsc,
                                    ce_p_fes,ce_y_fes,ce_y_crpbi,
-                                   ce_y_pm, ce_p_psb, ce_y_psb,led_l_coi,
+                                   ce_y_pm, ce_p_psb, ce_y_psb,led_l_coi,led_l_adi,
                                    led_l_denspop, led_l_urban, led_l_walk,
                                    led_l_traffic, led_l_roadprox, led_l_svi,
                                    led_l_crime, led_l_leadrisk, led_l_urbsat,
@@ -595,7 +634,7 @@ data_list <- append(data_list, list(dat,abcd_y_lt,ce_y_srpf,ce_p_nsc,
                                    ph_p_dhx,ph_y_yrb,ph_p_saiq,
                                    ph_p_sds,nt_p_stq,mh_y_bisbas,mh_y_upps,
                                    mh_p_cbcl,mh_y_or,su_p_crpf,
-                                   su_p_pr,su_y_peerdevia, su_y_path_intuse))
+                                   su_p_pr,su_y_peerdevia))
 length(data_list)
 
 
@@ -605,14 +644,16 @@ dat_all <- Reduce(function(x, y) merge(x, y, by="src_subject_id", all=TRUE), dat
   )
 names(dat_all)
 save(dat_all,file="/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/temp_dat/dat_all.Rda")
+load("/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/temp_dat/dat_all.Rda")
+names(dat_all)
+summary(dat_all$inr)
 
-
-#-- Non-missing INR - retain 9572 out of 11868 obs
+#-- Non-missing INR - retain 10313 out of 11868 obs
 dat_all_inr <- dat_all %>% filter(!is.na(inr))
 
 save(dat_all_inr,file="/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/temp_dat/dat_all_inr.Rda")
 
-#-- Complete cases on all considered predictors - only 5316 out of 11868
+#-- Complete cases on all considered predictors - only 5337 out of 11868
 dat_all_inr_complete<-dat_all_inr[complete.cases(dat_all_inr),]
 
 save(dat_all_inr_complete,file="/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/temp_dat/dat_all_inr_complete.Rda")
@@ -667,7 +708,7 @@ cat("
 ## These can be either complete variables or variables with missingness.
 ## Those with missingness must be imputed - need to exclude men_date_12y
 ## Explicitly specify.
-imputerVars <- names(dat_all_inr)[c(3:198)]
+imputerVars <- names(dat_all_inr)[c(3,28:190)]
 imputerVars 
 ## Keep variables that actually exist in dataset
 imputerVars <- intersect(unique(imputerVars), allVars)
@@ -722,7 +763,7 @@ cat("###   Variables with missingness that are not imputed\n")
 setdiff(missVars, imputedVars)
 cat("###   Relevant part of predictorMatrix\n")
 predictorMatrix[rowSums(predictorMatrix) > 0, colSums(predictorMatrix) > 0]
-
+for(i in names(dat_all_inr)) predictorMatrix[i,i] <- 0
 
 ## Empty imputation method to really exclude variables
 ## http://www.stefvanbuuren.nl/publications/MICE%20in%20R%20-%20Draft.pdf
@@ -739,8 +780,53 @@ dryMice$method[setdiff(allVars, imputedVars)] <- ""
 cat("###   Methods used for imputation\n")
 dryMice$method[sapply(dryMice$method, nchar) > 0]
 
-#-- Save Imputed Data!
-d_imp <- dryMice
-save(d_imp, file="/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/temp_dat/d_imp.Rdata")
 
-dim(complete(d_imp))
+
+cat("
+###  Run mice\n")
+M <- 1
+cat("### Imputing", M, "times\n")
+
+## Set seed for reproducibility
+set.seed(123)
+## Parallelized execution
+miceout <- foreach(i = seq_len(M), .combine = ibind) %dorng% {
+  cat("### Started iteration", i, "\n")
+  miceout <- mice(data = dat_all_inr, m = 1, maxit = 1, print = TRUE,
+                  predictorMatrix = predictorMatrix, method = dryMice$method,
+                  MaxNWts = 2000)
+  cat("### Completed iteration", i, "\n")
+  ## Make sure to return the output
+  miceout
+}
+
+
+cat("
+###  Show mice results\n")
+## mice object ifself
+miceout
+## Variables that no longer have missingness after imputation
+cat("###   Variables actually imputed\n")
+actuallyImputedVars <-
+  setdiff(names(d_pre_imp)[colSums(is.na(d_pre_imp)) > 0],
+          names(complete(miceout, action = 1))[colSums(is.na(complete(miceout, action = 1))) > 0])
+actuallyImputedVars
+
+## Examine discrepancies
+cat("###   Variables that were unexpectedly imputed\n")
+setdiff(actuallyImputedVars, imputedVars)
+cat("###   Variables that were planned for MI but not imputed\n")
+setdiff(imputedVars, actuallyImputedVars)
+
+## Still missing variables
+cat("###   Variables still having missing values\n")
+names(complete(miceout, action = 1))[colSums(is.na(complete(miceout, action = 1))) > 0]
+
+#-- Save Imputed Data!
+d_imp <- miceout
+
+
+#-- Save Imputed Data!
+save(d_imp, file="/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/temp_dat/d_imp_updated.Rdata")
+
+names(complete(d_imp))
