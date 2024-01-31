@@ -1,0 +1,3358 @@
+
+R version 4.2.1 (2022-06-23) -- "Funny-Looking Kid"
+Copyright (C) 2022 The R Foundation for Statistical Computing
+Platform: x86_64-apple-darwin17.0 (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+[Previously saved workspace restored]
+
+> #----------------------------------------------------------------------------#
+> #--- 6_multivariate_prediction.R
+> #--- Date: 10/5/2023
+> #----------------------------------------------------------------------------#
+> 
+> packages = c("tidyverse","kableExtra","gtsummary",
++              "expss","haven","sjlabelled",
++              "readxl","gtools","tableone",
++              "mice","HIMA","corrplot",
++              "reshape2","mclust","mlogit",
++              "tidyLPA","SuperLearner","xgboost",
++              "finalfit","caret","pROC",
++              "groupdata2","SHAPforxgboost")
+> 
+> package.check <- lapply(
++   packages,
++   FUN = function(x) {
++     if (!require(x, character.only = TRUE)) {
++       install.packages(x, dependencies = TRUE)
++       library(x, character.only = TRUE)
++     }
++   }
++ )
+Loading required package: tidyverse
+── Attaching packages ─────────────────────────────────────── tidyverse 1.3.2 ──
+✔ ggplot2 3.4.4     ✔ purrr   1.0.2
+✔ tibble  3.2.1     ✔ dplyr   1.1.4
+✔ tidyr   1.3.0     ✔ stringr 1.5.1
+✔ readr   2.1.3     ✔ forcats 0.5.2
+── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+✖ dplyr::filter() masks stats::filter()
+✖ dplyr::lag()    masks stats::lag()
+Loading required package: kableExtra
+
+Attaching package: ‘kableExtra’
+
+The following object is masked from ‘package:dplyr’:
+
+    group_rows
+
+Loading required package: gtsummary
+Loading required package: expss
+Loading required package: maditr
+
+Use magrittr pipe '%>%' to chain several operations:
+             mtcars %>%
+                 let(mpg_hp = mpg/hp) %>%
+                 take(mean(mpg_hp), by = am)
+        
+
+
+Attaching package: ‘maditr’
+
+The following objects are masked from ‘package:dplyr’:
+
+    between, coalesce, first, last
+
+The following object is masked from ‘package:purrr’:
+
+    transpose
+
+The following object is masked from ‘package:readr’:
+
+    cols
+
+
+Use 'expss_output_rnotebook()' to display tables inside R Notebooks.
+ To return to the console output, use 'expss_output_default()'.
+
+
+Attaching package: ‘expss’
+
+The following objects are masked from ‘package:gtsummary’:
+
+    contains, vars
+
+The following objects are masked from ‘package:stringr’:
+
+    fixed, regex
+
+The following objects are masked from ‘package:dplyr’:
+
+    compute, contains, na_if, recode, vars, where
+
+The following objects are masked from ‘package:purrr’:
+
+    keep, modify, modify_if, when
+
+The following objects are masked from ‘package:tidyr’:
+
+    contains, nest
+
+The following object is masked from ‘package:ggplot2’:
+
+    vars
+
+Loading required package: haven
+
+Attaching package: ‘haven’
+
+The following objects are masked from ‘package:expss’:
+
+    is.labelled, read_spss
+
+Loading required package: sjlabelled
+
+Attaching package: ‘sjlabelled’
+
+The following objects are masked from ‘package:haven’:
+
+    as_factor, read_sas, read_spss, read_stata, write_sas, zap_labels
+
+The following object is masked from ‘package:expss’:
+
+    read_spss
+
+The following object is masked from ‘package:forcats’:
+
+    as_factor
+
+The following object is masked from ‘package:dplyr’:
+
+    as_label
+
+The following object is masked from ‘package:ggplot2’:
+
+    as_label
+
+Loading required package: readxl
+Loading required package: gtools
+Loading required package: tableone
+Loading required package: mice
+
+Attaching package: ‘mice’
+
+The following object is masked from ‘package:stats’:
+
+    filter
+
+The following objects are masked from ‘package:base’:
+
+    cbind, rbind
+
+Loading required package: HIMA
+Loading required package: ncvreg
+Loading required package: glmnet
+Loading required package: Matrix
+
+Attaching package: ‘Matrix’
+
+The following objects are masked from ‘package:tidyr’:
+
+    expand, pack, unpack
+
+Loaded glmnet 4.1-4
+
+Attaching package: ‘glmnet’
+
+The following object is masked from ‘package:gtools’:
+
+    na.replace
+
+*************************************************************************************
+HIMA version 2.0.1
+To access full functionality of HIMA, please make sure this version is current.
+
+Citation:
+  1. Zhang H, Zheng Y, Zhang Z, Gao T, Joyce B, Yoon G, Zhang W, Schwartz J,
+     Just A, Colicino E, Vokonas P, Zhao L, Lv J, Baccarelli A, Hou L, Liu L.
+     Estimating and Testing High-dimensional Mediation Effects in Epigenetic Studies.
+     Bioinformatics. 2016;32(20):3150-4.
+     PMID: 27357171; PMCID: PMC5048064.
+
+  2. Zhang H, Zheng Y, Hou L, Zheng C, Liu L.
+     Mediation Analysis for Survival Data with High-Dimensional Mediators.
+     Bioinformatics. 2021;37(21):3815-21.
+     PMID: 34343267. PMCID: PMC8570823.
+
+  3. Zhang H, Chen J, Feng Y, Wang C, Li H, Liu L. 
+     Mediation effect selection in high-dimensional and compositional microbiome data.
+     Stat Med. 2021;40(4):885-96.
+     PMID: 33205470. PMCID: PMC7855955.
+
+*************************************************************************************
+Loading required package: corrplot
+corrplot 0.92 loaded
+Loading required package: reshape2
+
+Attaching package: ‘reshape2’
+
+The following objects are masked from ‘package:maditr’:
+
+    dcast, melt
+
+The following object is masked from ‘package:tidyr’:
+
+    smiths
+
+Loading required package: mclust
+Package 'mclust' version 6.0.0
+Type 'citation("mclust")' for citing this R package in publications.
+
+Attaching package: ‘mclust’
+
+The following object is masked from ‘package:purrr’:
+
+    map
+
+Loading required package: mlogit
+Loading required package: dfidx
+
+Attaching package: ‘dfidx’
+
+The following object is masked from ‘package:stats’:
+
+    filter
+
+Loading required package: tidyLPA
+You can use the function citation('tidyLPA') to create a citation for the use of {tidyLPA}.
+Mplus is not installed. Use only package = 'mclust' when calling estimate_profiles().
+Loading required package: SuperLearner
+Loading required package: nnls
+Loading required package: gam
+Loading required package: splines
+Loading required package: foreach
+
+Attaching package: ‘foreach’
+
+The following object is masked from ‘package:expss’:
+
+    when
+
+The following objects are masked from ‘package:purrr’:
+
+    accumulate, when
+
+Loaded gam 1.20.2
+
+Super Learner
+Version: 2.0-28
+Package created on 2021-05-04
+
+Loading required package: xgboost
+
+Attaching package: ‘xgboost’
+
+The following object is masked from ‘package:dfidx’:
+
+    slice
+
+The following object is masked from ‘package:dplyr’:
+
+    slice
+
+Loading required package: finalfit
+
+Attaching package: ‘finalfit’
+
+The following object is masked from ‘package:sjlabelled’:
+
+    remove_labels
+
+Loading required package: caret
+Loading required package: lattice
+
+Attaching package: ‘caret’
+
+The following object is masked from ‘package:purrr’:
+
+    lift
+
+Loading required package: pROC
+Type 'citation("pROC")' for a citation.
+
+Attaching package: ‘pROC’
+
+The following objects are masked from ‘package:stats’:
+
+    cov, smooth, var
+
+Loading required package: groupdata2
+Loading required package: SHAPforxgboost
+> 
+> 
+> #-- Non-missing INR - retain 10313 out of 11868 obs
+> load("/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/temp_dat/dat_all_inr.Rda")
+> 
+> #-- Complete cases on all considered predictors - only 5439 out of 11868
+> load("/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/temp_dat/dat_all_inr_complete.Rda")
+> 
+> #-- 1x imputed data for 10313 out of 11868 with non-missing INR
+> load("/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/temp_dat/d_imp_updated.Rdata")
+> 
+> #-- Load in data dictionary - to be able to label variables
+> dict <- read.csv("/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/temp_dat/data_dict.csv")
+> 
+> names(dat_all_inr)
+  [1] "src_subject_id"                 "inr"                           
+  [3] "nihtbx_fluidcomp_agecorrected"  "nihtbx_cryst_agecorrected"     
+  [5] "nihtbx_totalcomp_agecorrected"  "fluid_s"                       
+  [7] "cryst_s"                        "totcomp_s"                     
+  [9] "inr_quart"                      "inr_tert"                      
+ [11] "pov_highflcog"                  "pov_lowflcog"                  
+ [13] "welloff_highflcog"              "welloff_lowflcog"              
+ [15] "pov_highcrcog"                  "pov_lowcrcog"                  
+ [17] "welloff_highcrcog"              "welloff_lowcrcog"              
+ [19] "pov3_highflcog"                 "pov3_lowflcog"                 
+ [21] "welloff3_highflcog"             "welloff3_lowflcog"             
+ [23] "pov3_highcrcog"                 "pov3_lowcrcog"                 
+ [25] "welloff3_highcrcog"             "welloff3_lowcrcog"             
+ [27] "rel_family_id"                  "interview_age"                 
+ [29] "srpf_y_ss_ses"                  "nsc_p_ss_mean_3_items"         
+ [31] "fes_p_ss_fc"                    "fes_y_ss_fc"                   
+ [33] "crpbi_y_ss_parent"              "crpbi_y_ss_caregiver"          
+ [35] "pmq_y_ss_mean"                  "psb_p_ss_mean"                 
+ [37] "psb_y_ss_mean"                  "reshist_addr1_coi_ed_attain"   
+ [39] "reshist_addr1_coi_ed_apenr"     "reshist_addr1_coi_ed_college"  
+ [41] "reshist_addr1_coi_ed_prxece"    "reshist_addr1_coi_ed_ecenrol"  
+ [43] "reshist_addr1_coi_ed_hsgrad"    "reshist_addr1_coi_ed_prxhqece" 
+ [45] "reshist_addr1_coi_ed_schpov"    "reshist_addr1_coi_ed_teachxp"  
+ [47] "reshist_addr1_coi_ed_math"      "reshist_addr1_coi_ed_reading"  
+ [49] "reshist_addr1_coi_he_green"     "reshist_addr1_coi_he_food"     
+ [51] "reshist_addr1_coi_he_pm25"      "reshist_addr1_coi_he_heat"     
+ [53] "reshist_addr1_coi_he_suprfnd"   "reshist_addr1_coi_he_hlthins"  
+ [55] "reshist_addr1_coi_he_vacancy"   "reshist_addr1_coi_he_rsei"     
+ [57] "reshist_addr1_coi_he_ozone"     "reshist_addr1_coi_he_walk"     
+ [59] "reshist_addr1_coi_se_jobprox"   "reshist_addr1_coi_se_emprat"   
+ [61] "reshist_addr1_coi_se_occ"       "reshist_addr1_coi_se_home"     
+ [63] "reshist_addr1_coi_se_mhe"       "reshist_addr1_coi_se_povrate"  
+ [65] "reshist_addr1_coi_se_public"    "reshist_addr1_coi_se_single"   
+ [67] "reshist_addr1_adi_perc"         "reshist_addr1_popdensity"      
+ [69] "reshist_addr1_urban_area"       "reshist_addr1_walkindex"       
+ [71] "reshist_addr1_traffic_count"    "reshist_addr1_proxrd"          
+ [73] "reshist_addr1_svi_tot_20142018" "reshist_addr1_p1vlnt"          
+ [75] "reshist_addr1_leadrisk"         "reshist_addr1_urbsat_ntl"      
+ [77] "reshist_addr1_seg_diss_nww_m"   "reshist_addr1_seg_inter_nww_m" 
+ [79] "reshist_addr1_seg_ice_income"   "reshist_addr1_seg_ice_inc_bw"  
+ [81] "reshist_addr1_seg_entropy_t"    "reshist_state_racism_factor"   
+ [83] "reshist_state_so_factor"        "reshist_state_sexism_factor"   
+ [85] "reshist_addr1_ACAexpand"        "demo_mar_livingwith"           
+ [87] "demo_prnt_ed_v2"                "demo_prtnr_ed_v2"              
+ [89] "demo_fam_exp1_v2"               "demo_fam_exp2_v2"              
+ [91] "demo_fam_exp3_v2"               "demo_fam_exp4_v2"              
+ [93] "demo_fam_exp5_v2"               "demo_fam_exp6_v2"              
+ [95] "demo_fam_exp7_v2"               "ksads_ptsd_raw_754_p"          
+ [97] "ksads_ptsd_raw_755_p"           "ksads_ptsd_raw_756_p"          
+ [99] "ksads_ptsd_raw_757_p"           "ksads_ptsd_raw_758_p"          
+[101] "ksads_ptsd_raw_759_p"           "ksads_ptsd_raw_760_p"          
+[103] "ksads_ptsd_raw_761_p"           "ksads_ptsd_raw_762_p"          
+[105] "ksads_ptsd_raw_763_p"           "ksads_ptsd_raw_764_p"          
+[107] "ksads_ptsd_raw_765_p"           "ksads_ptsd_raw_766_p"          
+[109] "ksads_ptsd_raw_767_p"           "ksads_ptsd_raw_768_p"          
+[111] "ksads_ptsd_raw_769_p"           "ksads_ptsd_raw_770_p"          
+[113] "ksads_ptsd_accident"            "ksads_ptsd_wit_viol"           
+[115] "ksads_ptsd_thr_viol"            "ksads_ptsd_phys_abuse"         
+[117] "ksads_ptsd_sexual_abuse"        "kbi_p_c_bully"                 
+[119] "famhx_ss_fath_prob_alc_p"       "famhx_ss_moth_prob_alc_p"      
+[121] "famhx_ss_moth_prob_dg_p"        "famhx_ss_fath_prob_dg_p"       
+[123] "famhx_ss_fath_prob_prf_p"       "famhx_ss_moth_prob_prf_p"      
+[125] "famhx_ss_moth_prob_hspd_p"      "famhx_ss_fath_prob_hspd_p"     
+[127] "asr_q06_p"                      "asr_q90_p"                     
+[129] "asr_q126_p"                     "asr_scr_anxdep_t"              
+[131] "asr_scr_withdrawn_t"            "asr_scr_somatic_t"             
+[133] "asr_scr_thought_t"              "asr_scr_attention_t"           
+[135] "asr_scr_aggressive_t"           "asr_scr_rulebreak_t"           
+[137] "asr_scr_intrusive_t"            "pubertal_sex_p"                
+[139] "pds_p_ss_cat"                   "birth_weight"                  
+[141] "devhx_3_p"                      "devhx_4_p"                     
+[143] "devhx_6_p"                      "preg_any_subst"                
+[145] "devhx_10"                       "preg_caffeine"                 
+[147] "birth_complications"            "devhx_13_3_p"                  
+[149] "devhx_18_p"                     "physical_activity1_y"          
+[151] "physical_activity5_y"           "sai_p_activities___24"         
+[153] "sai_p_perf_arts"                "sai_p_team_sports"             
+[155] "sai_p_non_team_sports"          "sai_p_other"                   
+[157] "sai_p_any"                      "sds_p_ss_dims"                 
+[159] "sds_p_ss_sbd"                   "sds_p_ss_da"                   
+[161] "sds_p_ss_swtd"                  "sds_p_ss_does"                 
+[163] "sds_p_ss_shy"                   "sds_p_ss_total"                
+[165] "screentime1_p_hours"            "screentime2_p_hours"           
+[167] "bis_y_ss_bas_drive"             "bis_y_ss_bas_fs"               
+[169] "bis_y_ss_bas_rr"                "bis_y_ss_bis_sum"              
+[171] "upps_y_ss_positive_urgency"     "upps_y_ss_negative_urgency"    
+[173] "upps_y_ss_lack_of_planning"     "upps_y_ss_lack_of_perseverance"
+[175] "upps_y_ss_sensation_seeking"    "cbcl_scr_syn_anxdep_r"         
+[177] "cbcl_scr_syn_withdep_r"         "cbcl_scr_syn_somatic_r"        
+[179] "cbcl_scr_syn_social_r"          "cbcl_scr_syn_thought_r"        
+[181] "cbcl_scr_syn_attention_r"       "cbcl_scr_syn_rulebreak_r"      
+[183] "cbcl_scr_syn_aggressive_r"      "num_friends"                   
+[185] "num_close_friends"              "parent_su_comm_risk"           
+[187] "parent_subst_rules"             "parent_no_subst_rules"         
+[189] "peer_deviance"                  "some_peer_deviance"            
+> vars <- names(dat_all_inr)[c(2,28:190)]
+> 
+> #--------------------------------------------------------------------#
+> #-- XGBoost alone - can handle missing data in predictor variables --#
+> 
+> #---------------------------------------------------#
+> #-- Poverty (tertiles), fluid cognitive function --#
+> 
+> #-- Look at N in the bottom tertile of the INR distribution
+> names(dat_all_inr)
+  [1] "src_subject_id"                 "inr"                           
+  [3] "nihtbx_fluidcomp_agecorrected"  "nihtbx_cryst_agecorrected"     
+  [5] "nihtbx_totalcomp_agecorrected"  "fluid_s"                       
+  [7] "cryst_s"                        "totcomp_s"                     
+  [9] "inr_quart"                      "inr_tert"                      
+ [11] "pov_highflcog"                  "pov_lowflcog"                  
+ [13] "welloff_highflcog"              "welloff_lowflcog"              
+ [15] "pov_highcrcog"                  "pov_lowcrcog"                  
+ [17] "welloff_highcrcog"              "welloff_lowcrcog"              
+ [19] "pov3_highflcog"                 "pov3_lowflcog"                 
+ [21] "welloff3_highflcog"             "welloff3_lowflcog"             
+ [23] "pov3_highcrcog"                 "pov3_lowcrcog"                 
+ [25] "welloff3_highcrcog"             "welloff3_lowcrcog"             
+ [27] "rel_family_id"                  "interview_age"                 
+ [29] "srpf_y_ss_ses"                  "nsc_p_ss_mean_3_items"         
+ [31] "fes_p_ss_fc"                    "fes_y_ss_fc"                   
+ [33] "crpbi_y_ss_parent"              "crpbi_y_ss_caregiver"          
+ [35] "pmq_y_ss_mean"                  "psb_p_ss_mean"                 
+ [37] "psb_y_ss_mean"                  "reshist_addr1_coi_ed_attain"   
+ [39] "reshist_addr1_coi_ed_apenr"     "reshist_addr1_coi_ed_college"  
+ [41] "reshist_addr1_coi_ed_prxece"    "reshist_addr1_coi_ed_ecenrol"  
+ [43] "reshist_addr1_coi_ed_hsgrad"    "reshist_addr1_coi_ed_prxhqece" 
+ [45] "reshist_addr1_coi_ed_schpov"    "reshist_addr1_coi_ed_teachxp"  
+ [47] "reshist_addr1_coi_ed_math"      "reshist_addr1_coi_ed_reading"  
+ [49] "reshist_addr1_coi_he_green"     "reshist_addr1_coi_he_food"     
+ [51] "reshist_addr1_coi_he_pm25"      "reshist_addr1_coi_he_heat"     
+ [53] "reshist_addr1_coi_he_suprfnd"   "reshist_addr1_coi_he_hlthins"  
+ [55] "reshist_addr1_coi_he_vacancy"   "reshist_addr1_coi_he_rsei"     
+ [57] "reshist_addr1_coi_he_ozone"     "reshist_addr1_coi_he_walk"     
+ [59] "reshist_addr1_coi_se_jobprox"   "reshist_addr1_coi_se_emprat"   
+ [61] "reshist_addr1_coi_se_occ"       "reshist_addr1_coi_se_home"     
+ [63] "reshist_addr1_coi_se_mhe"       "reshist_addr1_coi_se_povrate"  
+ [65] "reshist_addr1_coi_se_public"    "reshist_addr1_coi_se_single"   
+ [67] "reshist_addr1_adi_perc"         "reshist_addr1_popdensity"      
+ [69] "reshist_addr1_urban_area"       "reshist_addr1_walkindex"       
+ [71] "reshist_addr1_traffic_count"    "reshist_addr1_proxrd"          
+ [73] "reshist_addr1_svi_tot_20142018" "reshist_addr1_p1vlnt"          
+ [75] "reshist_addr1_leadrisk"         "reshist_addr1_urbsat_ntl"      
+ [77] "reshist_addr1_seg_diss_nww_m"   "reshist_addr1_seg_inter_nww_m" 
+ [79] "reshist_addr1_seg_ice_income"   "reshist_addr1_seg_ice_inc_bw"  
+ [81] "reshist_addr1_seg_entropy_t"    "reshist_state_racism_factor"   
+ [83] "reshist_state_so_factor"        "reshist_state_sexism_factor"   
+ [85] "reshist_addr1_ACAexpand"        "demo_mar_livingwith"           
+ [87] "demo_prnt_ed_v2"                "demo_prtnr_ed_v2"              
+ [89] "demo_fam_exp1_v2"               "demo_fam_exp2_v2"              
+ [91] "demo_fam_exp3_v2"               "demo_fam_exp4_v2"              
+ [93] "demo_fam_exp5_v2"               "demo_fam_exp6_v2"              
+ [95] "demo_fam_exp7_v2"               "ksads_ptsd_raw_754_p"          
+ [97] "ksads_ptsd_raw_755_p"           "ksads_ptsd_raw_756_p"          
+ [99] "ksads_ptsd_raw_757_p"           "ksads_ptsd_raw_758_p"          
+[101] "ksads_ptsd_raw_759_p"           "ksads_ptsd_raw_760_p"          
+[103] "ksads_ptsd_raw_761_p"           "ksads_ptsd_raw_762_p"          
+[105] "ksads_ptsd_raw_763_p"           "ksads_ptsd_raw_764_p"          
+[107] "ksads_ptsd_raw_765_p"           "ksads_ptsd_raw_766_p"          
+[109] "ksads_ptsd_raw_767_p"           "ksads_ptsd_raw_768_p"          
+[111] "ksads_ptsd_raw_769_p"           "ksads_ptsd_raw_770_p"          
+[113] "ksads_ptsd_accident"            "ksads_ptsd_wit_viol"           
+[115] "ksads_ptsd_thr_viol"            "ksads_ptsd_phys_abuse"         
+[117] "ksads_ptsd_sexual_abuse"        "kbi_p_c_bully"                 
+[119] "famhx_ss_fath_prob_alc_p"       "famhx_ss_moth_prob_alc_p"      
+[121] "famhx_ss_moth_prob_dg_p"        "famhx_ss_fath_prob_dg_p"       
+[123] "famhx_ss_fath_prob_prf_p"       "famhx_ss_moth_prob_prf_p"      
+[125] "famhx_ss_moth_prob_hspd_p"      "famhx_ss_fath_prob_hspd_p"     
+[127] "asr_q06_p"                      "asr_q90_p"                     
+[129] "asr_q126_p"                     "asr_scr_anxdep_t"              
+[131] "asr_scr_withdrawn_t"            "asr_scr_somatic_t"             
+[133] "asr_scr_thought_t"              "asr_scr_attention_t"           
+[135] "asr_scr_aggressive_t"           "asr_scr_rulebreak_t"           
+[137] "asr_scr_intrusive_t"            "pubertal_sex_p"                
+[139] "pds_p_ss_cat"                   "birth_weight"                  
+[141] "devhx_3_p"                      "devhx_4_p"                     
+[143] "devhx_6_p"                      "preg_any_subst"                
+[145] "devhx_10"                       "preg_caffeine"                 
+[147] "birth_complications"            "devhx_13_3_p"                  
+[149] "devhx_18_p"                     "physical_activity1_y"          
+[151] "physical_activity5_y"           "sai_p_activities___24"         
+[153] "sai_p_perf_arts"                "sai_p_team_sports"             
+[155] "sai_p_non_team_sports"          "sai_p_other"                   
+[157] "sai_p_any"                      "sds_p_ss_dims"                 
+[159] "sds_p_ss_sbd"                   "sds_p_ss_da"                   
+[161] "sds_p_ss_swtd"                  "sds_p_ss_does"                 
+[163] "sds_p_ss_shy"                   "sds_p_ss_total"                
+[165] "screentime1_p_hours"            "screentime2_p_hours"           
+[167] "bis_y_ss_bas_drive"             "bis_y_ss_bas_fs"               
+[169] "bis_y_ss_bas_rr"                "bis_y_ss_bis_sum"              
+[171] "upps_y_ss_positive_urgency"     "upps_y_ss_negative_urgency"    
+[173] "upps_y_ss_lack_of_planning"     "upps_y_ss_lack_of_perseverance"
+[175] "upps_y_ss_sensation_seeking"    "cbcl_scr_syn_anxdep_r"         
+[177] "cbcl_scr_syn_withdep_r"         "cbcl_scr_syn_somatic_r"        
+[179] "cbcl_scr_syn_social_r"          "cbcl_scr_syn_thought_r"        
+[181] "cbcl_scr_syn_attention_r"       "cbcl_scr_syn_rulebreak_r"      
+[183] "cbcl_scr_syn_aggressive_r"      "num_friends"                   
+[185] "num_close_friends"              "parent_su_comm_risk"           
+[187] "parent_subst_rules"             "parent_no_subst_rules"         
+[189] "peer_deviance"                  "some_peer_deviance"            
+> summary(as.factor(dat_all_inr$inr_tert))
+   1    2    3 
+3373 3135 3805 
+> 
+> d_pov_highcog <- dat_all_inr %>% filter(pov3_highcrcog==1) %>% 
++   mutate(profile="pov3_highcrcog",
++          resilience=1)
+> d_pov_lowcog <- dat_all_inr %>% filter(pov3_lowcrcog==1) %>% 
++   mutate(profile="pov3_lowcrcog",
++          resilience=0)
+> 
+> d_flpov <- rbind(d_pov_highcog,d_pov_lowcog)
+> 
+> 
+> #-------------------------------------------------------------------------------#
+> #-- 10-fold cross-validated XGBoost in data with missing values in predictors --#
+> 
+> set.seed(123)
+> labels <- d_flpov$resilience
+> 
+> names(d_flpov)
+  [1] "src_subject_id"                 "inr"                           
+  [3] "nihtbx_fluidcomp_agecorrected"  "nihtbx_cryst_agecorrected"     
+  [5] "nihtbx_totalcomp_agecorrected"  "fluid_s"                       
+  [7] "cryst_s"                        "totcomp_s"                     
+  [9] "inr_quart"                      "inr_tert"                      
+ [11] "pov_highflcog"                  "pov_lowflcog"                  
+ [13] "welloff_highflcog"              "welloff_lowflcog"              
+ [15] "pov_highcrcog"                  "pov_lowcrcog"                  
+ [17] "welloff_highcrcog"              "welloff_lowcrcog"              
+ [19] "pov3_highflcog"                 "pov3_lowflcog"                 
+ [21] "welloff3_highflcog"             "welloff3_lowflcog"             
+ [23] "pov3_highcrcog"                 "pov3_lowcrcog"                 
+ [25] "welloff3_highcrcog"             "welloff3_lowcrcog"             
+ [27] "rel_family_id"                  "interview_age"                 
+ [29] "srpf_y_ss_ses"                  "nsc_p_ss_mean_3_items"         
+ [31] "fes_p_ss_fc"                    "fes_y_ss_fc"                   
+ [33] "crpbi_y_ss_parent"              "crpbi_y_ss_caregiver"          
+ [35] "pmq_y_ss_mean"                  "psb_p_ss_mean"                 
+ [37] "psb_y_ss_mean"                  "reshist_addr1_coi_ed_attain"   
+ [39] "reshist_addr1_coi_ed_apenr"     "reshist_addr1_coi_ed_college"  
+ [41] "reshist_addr1_coi_ed_prxece"    "reshist_addr1_coi_ed_ecenrol"  
+ [43] "reshist_addr1_coi_ed_hsgrad"    "reshist_addr1_coi_ed_prxhqece" 
+ [45] "reshist_addr1_coi_ed_schpov"    "reshist_addr1_coi_ed_teachxp"  
+ [47] "reshist_addr1_coi_ed_math"      "reshist_addr1_coi_ed_reading"  
+ [49] "reshist_addr1_coi_he_green"     "reshist_addr1_coi_he_food"     
+ [51] "reshist_addr1_coi_he_pm25"      "reshist_addr1_coi_he_heat"     
+ [53] "reshist_addr1_coi_he_suprfnd"   "reshist_addr1_coi_he_hlthins"  
+ [55] "reshist_addr1_coi_he_vacancy"   "reshist_addr1_coi_he_rsei"     
+ [57] "reshist_addr1_coi_he_ozone"     "reshist_addr1_coi_he_walk"     
+ [59] "reshist_addr1_coi_se_jobprox"   "reshist_addr1_coi_se_emprat"   
+ [61] "reshist_addr1_coi_se_occ"       "reshist_addr1_coi_se_home"     
+ [63] "reshist_addr1_coi_se_mhe"       "reshist_addr1_coi_se_povrate"  
+ [65] "reshist_addr1_coi_se_public"    "reshist_addr1_coi_se_single"   
+ [67] "reshist_addr1_adi_perc"         "reshist_addr1_popdensity"      
+ [69] "reshist_addr1_urban_area"       "reshist_addr1_walkindex"       
+ [71] "reshist_addr1_traffic_count"    "reshist_addr1_proxrd"          
+ [73] "reshist_addr1_svi_tot_20142018" "reshist_addr1_p1vlnt"          
+ [75] "reshist_addr1_leadrisk"         "reshist_addr1_urbsat_ntl"      
+ [77] "reshist_addr1_seg_diss_nww_m"   "reshist_addr1_seg_inter_nww_m" 
+ [79] "reshist_addr1_seg_ice_income"   "reshist_addr1_seg_ice_inc_bw"  
+ [81] "reshist_addr1_seg_entropy_t"    "reshist_state_racism_factor"   
+ [83] "reshist_state_so_factor"        "reshist_state_sexism_factor"   
+ [85] "reshist_addr1_ACAexpand"        "demo_mar_livingwith"           
+ [87] "demo_prnt_ed_v2"                "demo_prtnr_ed_v2"              
+ [89] "demo_fam_exp1_v2"               "demo_fam_exp2_v2"              
+ [91] "demo_fam_exp3_v2"               "demo_fam_exp4_v2"              
+ [93] "demo_fam_exp5_v2"               "demo_fam_exp6_v2"              
+ [95] "demo_fam_exp7_v2"               "ksads_ptsd_raw_754_p"          
+ [97] "ksads_ptsd_raw_755_p"           "ksads_ptsd_raw_756_p"          
+ [99] "ksads_ptsd_raw_757_p"           "ksads_ptsd_raw_758_p"          
+[101] "ksads_ptsd_raw_759_p"           "ksads_ptsd_raw_760_p"          
+[103] "ksads_ptsd_raw_761_p"           "ksads_ptsd_raw_762_p"          
+[105] "ksads_ptsd_raw_763_p"           "ksads_ptsd_raw_764_p"          
+[107] "ksads_ptsd_raw_765_p"           "ksads_ptsd_raw_766_p"          
+[109] "ksads_ptsd_raw_767_p"           "ksads_ptsd_raw_768_p"          
+[111] "ksads_ptsd_raw_769_p"           "ksads_ptsd_raw_770_p"          
+[113] "ksads_ptsd_accident"            "ksads_ptsd_wit_viol"           
+[115] "ksads_ptsd_thr_viol"            "ksads_ptsd_phys_abuse"         
+[117] "ksads_ptsd_sexual_abuse"        "kbi_p_c_bully"                 
+[119] "famhx_ss_fath_prob_alc_p"       "famhx_ss_moth_prob_alc_p"      
+[121] "famhx_ss_moth_prob_dg_p"        "famhx_ss_fath_prob_dg_p"       
+[123] "famhx_ss_fath_prob_prf_p"       "famhx_ss_moth_prob_prf_p"      
+[125] "famhx_ss_moth_prob_hspd_p"      "famhx_ss_fath_prob_hspd_p"     
+[127] "asr_q06_p"                      "asr_q90_p"                     
+[129] "asr_q126_p"                     "asr_scr_anxdep_t"              
+[131] "asr_scr_withdrawn_t"            "asr_scr_somatic_t"             
+[133] "asr_scr_thought_t"              "asr_scr_attention_t"           
+[135] "asr_scr_aggressive_t"           "asr_scr_rulebreak_t"           
+[137] "asr_scr_intrusive_t"            "pubertal_sex_p"                
+[139] "pds_p_ss_cat"                   "birth_weight"                  
+[141] "devhx_3_p"                      "devhx_4_p"                     
+[143] "devhx_6_p"                      "preg_any_subst"                
+[145] "devhx_10"                       "preg_caffeine"                 
+[147] "birth_complications"            "devhx_13_3_p"                  
+[149] "devhx_18_p"                     "physical_activity1_y"          
+[151] "physical_activity5_y"           "sai_p_activities___24"         
+[153] "sai_p_perf_arts"                "sai_p_team_sports"             
+[155] "sai_p_non_team_sports"          "sai_p_other"                   
+[157] "sai_p_any"                      "sds_p_ss_dims"                 
+[159] "sds_p_ss_sbd"                   "sds_p_ss_da"                   
+[161] "sds_p_ss_swtd"                  "sds_p_ss_does"                 
+[163] "sds_p_ss_shy"                   "sds_p_ss_total"                
+[165] "screentime1_p_hours"            "screentime2_p_hours"           
+[167] "bis_y_ss_bas_drive"             "bis_y_ss_bas_fs"               
+[169] "bis_y_ss_bas_rr"                "bis_y_ss_bis_sum"              
+[171] "upps_y_ss_positive_urgency"     "upps_y_ss_negative_urgency"    
+[173] "upps_y_ss_lack_of_planning"     "upps_y_ss_lack_of_perseverance"
+[175] "upps_y_ss_sensation_seeking"    "cbcl_scr_syn_anxdep_r"         
+[177] "cbcl_scr_syn_withdep_r"         "cbcl_scr_syn_somatic_r"        
+[179] "cbcl_scr_syn_social_r"          "cbcl_scr_syn_thought_r"        
+[181] "cbcl_scr_syn_attention_r"       "cbcl_scr_syn_rulebreak_r"      
+[183] "cbcl_scr_syn_aggressive_r"      "num_friends"                   
+[185] "num_close_friends"              "parent_su_comm_risk"           
+[187] "parent_subst_rules"             "parent_no_subst_rules"         
+[189] "peer_deviance"                  "some_peer_deviance"            
+[191] "profile"                        "resilience"                    
+> new_tr <- as.matrix(d_flpov[,c(2,28:190)])
+> 
+> dtrain <- xgb.DMatrix(data = new_tr,label = labels) 
+> 
+> params <- list(booster = "gbtree", objective = "binary:logistic", 
++                eta=0.1, gamma=0.1, max_depth=2, 
++                min_child_weight=1, 
++                subsample=1, colsample_bytree=1)
+> 
+> xgbcv <- xgb.cv(params = params, data = dtrain, nrounds = 50, 
++                 nfold = 10,print_every_n = 10, 
++                 prediction=TRUE,
++                 maximize = F, eval="error")
+[1]	train-logloss:0.666157+0.000458	test-logloss:0.666567+0.002342 
+[11]	train-logloss:0.550892+0.002196	test-logloss:0.558002+0.016349 
+[21]	train-logloss:0.520020+0.002669	test-logloss:0.534673+0.021580 
+[31]	train-logloss:0.503878+0.002864	test-logloss:0.525712+0.024561 
+[41]	train-logloss:0.491811+0.002913	test-logloss:0.520842+0.025383 
+[50]	train-logloss:0.482671+0.002948	test-logloss:0.516894+0.025650 
+> xgbpred <- xgbcv$pred
+> 
+> summary(xgbpred)
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+0.03909 0.16851 0.24205 0.26409 0.33706 0.67288 
+> summary(d_flpov$resilience)
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0000  0.0000  0.0000  0.2633  1.0000  1.0000 
+> 
+> hist(xgbpred)
+> roc_test <- roc(labels, xgbpred, algorithm = 2) 
+Setting levels: control = 0, case = 1
+Setting direction: controls < cases
+> roc_test$auc
+Area under the curve: 0.7238
+> 
+> #-- Determine SHAP values - variable importance
+> 
+> 
+> 
+> #-- Assess variable importance
+> 
+> xgb_util <- xgboost(data = new_tr, label = xgbpred, nrounds = 50, verbose=FALSE,params = params)
+> importance_matrix_util <- xgb.importance(model = xgb_util)
+> importance_matrix_util
+                           Feature         Gain       Cover   Frequency
+ 1:               demo_prtnr_ed_v2 0.3469282229 0.146412379 0.100000000
+ 2:   reshist_addr1_seg_ice_inc_bw 0.1999262881 0.114888573 0.100000000
+ 3:                            inr 0.1239545236 0.129892108 0.106666667
+ 4:                     devhx_18_p 0.1134044460 0.119919122 0.133333333
+ 5:                demo_prnt_ed_v2 0.0344649276 0.063271377 0.053333333
+ 6:    reshist_addr1_coi_se_public 0.0331493679 0.035421830 0.046666667
+ 7:       cbcl_scr_syn_attention_r 0.0313833066 0.077738905 0.093333333
+ 8:     upps_y_ss_lack_of_planning 0.0196166947 0.061178766 0.066666667
+ 9: reshist_addr1_svi_tot_20142018 0.0182719812 0.034292840 0.026666667
+10:                  peer_deviance 0.0168671072 0.050836160 0.053333333
+11:       reshist_addr1_coi_se_mhe 0.0152602083 0.010640348 0.006666667
+12:    reshist_addr1_coi_se_emprat 0.0092955627 0.027813035 0.020000000
+13:    reshist_addr1_coi_ed_schpov 0.0082351502 0.011906083 0.013333333
+14:     upps_y_ss_positive_urgency 0.0054267703 0.020021677 0.033333333
+15:     reshist_addr1_coi_ed_apenr 0.0050623148 0.018001913 0.026666667
+16:                   birth_weight 0.0048329933 0.023205850 0.033333333
+17:               asr_scr_anxdep_t 0.0047773077 0.009947368 0.026666667
+18:                sai_p_perf_arts 0.0035905659 0.016317797 0.013333333
+19:           physical_activity1_y 0.0022017528 0.012501360 0.020000000
+20:            asr_scr_attention_t 0.0013700037 0.004716242 0.013333333
+21:            parent_su_comm_risk 0.0013255803 0.009049842 0.006666667
+22:          sai_p_activities___24 0.0006549242 0.002026427 0.006666667
+                           Feature         Gain       Cover   Frequency
+> ## Create table comparing distributions of top 20 important variables by any_util
+> vars <- as.vector(unlist(importance_matrix_util[1:20,1]))
+> imp <- data.frame(importance_matrix_util)
+> names(imp) <- c("Variable","Gain","Cover","Frequency")
+> 
+> table_util_imp <- CreateTableOne(vars = vars,
++                                  strata = c("resilience"), 
++                                  includeNA = F, 
++                                  addOverall = F,
++                                  data = d_flpov)
+> table_util_imp <- data.frame(print(table_util_imp, explain=F, missing=T, catDigits = 2, contDigits = 2))
+                                Stratified by resilience
+                                 0                   1                   p     
+  n                                  2485                 888                  
+  demo_prtnr_ed_v2                  12.80 (2.51)        14.03 (2.70)     <0.001
+  reshist_addr1_seg_ice_inc_bw       0.00 (0.24)         0.12 (0.23)     <0.001
+  inr                                0.94 (0.59)         1.21 (0.56)     <0.001
+  devhx_18_p                         5.45 (7.71)         7.60 (8.12)     <0.001
+  demo_prnt_ed_v2                   13.26 (2.22)        14.23 (2.18)     <0.001
+  reshist_addr1_coi_se_public       22.61 (15.61)       15.86 (12.88)    <0.001
+  cbcl_scr_syn_attention_r           3.67 (3.87)         2.81 (3.50)     <0.001
+  upps_y_ss_lack_of_planning         7.54 (2.62)         7.83 (2.37)      0.004
+  reshist_addr1_svi_tot_20142018     0.66 (0.27)         0.52 (0.30)     <0.001
+  peer_deviance                      0.21 (0.94)         0.15 (1.25)      0.108
+  reshist_addr1_coi_se_mhe       48809.53 (22342.38) 59879.58 (25965.97) <0.001
+  reshist_addr1_coi_se_emprat       73.16 (11.11)       77.35 (8.99)     <0.001
+  reshist_addr1_coi_ed_schpov       68.73 (23.59)       57.38 (26.13)    <0.001
+  upps_y_ss_positive_urgency         8.68 (3.16)         7.95 (2.95)     <0.001
+  reshist_addr1_coi_ed_apenr         0.39 (0.22)         0.45 (0.23)     <0.001
+  birth_weight                       6.85 (1.45)         7.18 (1.39)     <0.001
+  asr_scr_anxdep_t                  54.19 (6.84)        55.09 (6.88)      0.001
+  sai_p_perf_arts                    0.35 (0.48)         0.48 (0.50)     <0.001
+  physical_activity1_y               3.00 (2.38)         3.41 (2.30)     <0.001
+  asr_scr_attention_t               54.20 (6.30)        55.59 (7.51)     <0.001
+                                Stratified by resilience
+                                 test Missing
+  n                                          
+  demo_prtnr_ed_v2                     0.1   
+  reshist_addr1_seg_ice_inc_bw         5.9   
+  inr                                  0.0   
+  devhx_18_p                           5.0   
+  demo_prnt_ed_v2                      0.1   
+  reshist_addr1_coi_se_public         10.9   
+  cbcl_scr_syn_attention_r             0.0   
+  upps_y_ss_lack_of_planning           0.2   
+  reshist_addr1_svi_tot_20142018      10.9   
+  peer_deviance                        4.3   
+  reshist_addr1_coi_se_mhe            11.0   
+  reshist_addr1_coi_se_emprat         10.9   
+  reshist_addr1_coi_ed_schpov         10.9   
+  upps_y_ss_positive_urgency           0.2   
+  reshist_addr1_coi_ed_apenr          11.0   
+  birth_weight                        12.5   
+  asr_scr_anxdep_t                     0.8   
+  sai_p_perf_arts                      0.1   
+  physical_activity1_y                 0.3   
+  asr_scr_attention_t                  0.8   
+> table_util_imp <- tibble::rownames_to_column(table_util_imp, "Characteristic")[,c(1:5)]
+> table_util_imp
+                   Characteristic                  X0                  X1
+1                               n                2485                 888
+2                demo_prtnr_ed_v2        12.80 (2.51)        14.03 (2.70)
+3    reshist_addr1_seg_ice_inc_bw         0.00 (0.24)         0.12 (0.23)
+4                             inr         0.94 (0.59)         1.21 (0.56)
+5                      devhx_18_p         5.45 (7.71)         7.60 (8.12)
+6                 demo_prnt_ed_v2        13.26 (2.22)        14.23 (2.18)
+7     reshist_addr1_coi_se_public       22.61 (15.61)       15.86 (12.88)
+8        cbcl_scr_syn_attention_r         3.67 (3.87)         2.81 (3.50)
+9      upps_y_ss_lack_of_planning         7.54 (2.62)         7.83 (2.37)
+10 reshist_addr1_svi_tot_20142018         0.66 (0.27)         0.52 (0.30)
+11                  peer_deviance         0.21 (0.94)         0.15 (1.25)
+12       reshist_addr1_coi_se_mhe 48809.53 (22342.38) 59879.58 (25965.97)
+13    reshist_addr1_coi_se_emprat       73.16 (11.11)        77.35 (8.99)
+14    reshist_addr1_coi_ed_schpov       68.73 (23.59)       57.38 (26.13)
+15     upps_y_ss_positive_urgency         8.68 (3.16)         7.95 (2.95)
+16     reshist_addr1_coi_ed_apenr         0.39 (0.22)         0.45 (0.23)
+17                   birth_weight         6.85 (1.45)         7.18 (1.39)
+18               asr_scr_anxdep_t        54.19 (6.84)        55.09 (6.88)
+19                sai_p_perf_arts         0.35 (0.48)         0.48 (0.50)
+20           physical_activity1_y         3.00 (2.38)         3.41 (2.30)
+21            asr_scr_attention_t        54.20 (6.30)        55.59 (7.51)
+        p test
+1             
+2  <0.001     
+3  <0.001     
+4  <0.001     
+5  <0.001     
+6  <0.001     
+7  <0.001     
+8  <0.001     
+9   0.004     
+10 <0.001     
+11  0.108     
+12 <0.001     
+13 <0.001     
+14 <0.001     
+15 <0.001     
+16 <0.001     
+17 <0.001     
+18  0.001     
+19 <0.001     
+20 <0.001     
+21 <0.001     
+> 
+> names(table_util_imp) <- c("Variable", "Poverty_Low_Cog", "Poverty_High_Cog","p_value","prop_missing")
+> 
+> table_util_imp_label <- merge(x=table_util_imp, y=dict, by="Variable",all.x=T) %>%
++   dplyr::select(Label,Variable,Poverty_Low_Cog,Poverty_High_Cog,p_value,prop_missing,Order,Order2)
+> 
+> table_util_imp_label_gain <- merge(x=table_util_imp_label, y=imp, all.x=T, by="Variable")
+> table_util_imp_label_gain
+                         Variable
+1                asr_scr_anxdep_t
+2             asr_scr_attention_t
+3                    birth_weight
+4        cbcl_scr_syn_attention_r
+5                 demo_prnt_ed_v2
+6                demo_prtnr_ed_v2
+7                      devhx_18_p
+8                             inr
+9                               n
+10                  peer_deviance
+11           physical_activity1_y
+12     reshist_addr1_coi_ed_apenr
+13    reshist_addr1_coi_ed_schpov
+14    reshist_addr1_coi_se_emprat
+15       reshist_addr1_coi_se_mhe
+16    reshist_addr1_coi_se_public
+17   reshist_addr1_seg_ice_inc_bw
+18 reshist_addr1_svi_tot_20142018
+19                sai_p_perf_arts
+20     upps_y_ss_lack_of_planning
+21     upps_y_ss_positive_urgency
+                                                                                                                                                                                                                                                                                                                                Label
+1                                                                                                                                                                                                                                              Parental psychopathology - adult self-report (parent) ASEBA: Anxious/depressed t-score
+2                                                                                                                                                                                                                                             Parental psychopathology - adult self-report (parent) ASEBA: Attention problems t-score
+3                                                                                                                                                                                                                                                                                 Developmental history quesitonnaire: birth weight: 
+4                                                                                                                                                                                                                              Child dimensional psychopathology - CBCL -  parent-reported: Attention CBCL Syndrome Scale (raw score)
+5                                                                                                                                                                                                    Parental ed - primary: What is the highest grade or level of school you have completed or the highest degree you have received? 
+6                                                                                                                                                          Parental ed - secondary: What is the highest grade or level of school your partner completed or highest degree they received? (imputed with parent's education if missing)
+7                                                                                                                                                                                                                                                                  Developmental history questionnaire: nuumber of months breastfed: 
+8                                                                                                                                                                                                                                                                                                                                 INR
+9                                                                                                                                                                                                                                                                                                                                   n
+10                                                                                                                                                                                                                                                                     Peer deviance (youth-reported): Continuous peer deviance score
+11                                                      Physical activity: During the past 7 days, on how many days were you physically active for a total of at least 60 minutes per day? (Add up all the time you spent in any kind of physical activity that increased your heart rate and made you breathe hard some of the time)
+12                                                                                                                                                                                                  Neightbohood quality: Child opportunity index (COI) 2.0 - primary address: Education Domain: Advanced Placement course enrollment
+13                                                                                                                                                                                                                        Neightbohood quality: Child opportunity index (COI) 2.0 - primary address: Education Domain: School poverty
+14                                                                                                                                                                                                             Neightbohood quality: Child opportunity index (COI) 2.0 - primary address: Social and Economic Domain: Employment rate
+15                                                                                                                                                                                                     Neightbohood quality: Child opportunity index (COI) 2.0 - primary address: Social and Economic Domain: Median household income
+16                                                                                                                                                                                                      Neightbohood quality: Child opportunity index (COI) 2.0 - primary address: Social and Economic Domain: Public assistance rate
+17             Neighborhood: residential segregation - Index of Concentrations at the Extremes: Residential history derived- Index of Concentration at the Extremes(Income+ BW), (non-Hispanic white Households income >= $100k) - (non-Hispanic Black Households income < $25k)/total population, ACS2014-2018; census tract (addr1)
+18 Neighborhood quality: Social Vulnerability Index (SVI) - overall: Residential history derived - Census tract CDC Social Vulnerability Index (SVI) (overall percentile) at primary residential address (ACS 2014-2018 5 yr avg) - based on 15 census variables indicating area\xd5s potential need for support following a disaster
+19                                                                                                                                                                                                                                                                        Physical activity / hobbies: Ever performing arts (0,23,25)
+20                                                                                             Temperament/Personality: UPPS-P (Urgency, Premeditation, Perseverance, Sensation Seeking, Positive Urgency, Impulsive behavior scale): Lack of Premeditation: tendency to act rashly without first reflecting upon the decision to act
+21                                                                                                                        Temperament/Personality: UPPS-P (Urgency, Premeditation, Perseverance, Sensation Seeking, Positive Urgency, Impulsive behavior scale): Positive Urgency: tendency to act impulsively due to positive affect
+       Poverty_Low_Cog    Poverty_High_Cog p_value prop_missing Order Order2
+1         54.19 (6.84)        55.09 (6.88)   0.001                  3     39
+2         54.20 (6.30)        55.59 (7.51)  <0.001                  3     43
+3          6.85 (1.45)         7.18 (1.39)  <0.001                  2      2
+4          3.67 (3.87)         2.81 (3.50)  <0.001                  3     52
+5         13.26 (2.22)        14.23 (2.18)  <0.001                  1      1
+6         12.80 (2.51)        14.03 (2.70)  <0.001                  1      2
+7          5.45 (7.71)         7.60 (8.12)  <0.001                  2     16
+8          0.94 (0.59)         1.21 (0.56)  <0.001                  0      1
+9                 2485                 888                          0      0
+10         0.21 (0.94)         0.15 (1.25)   0.108                  5      3
+11         3.00 (2.38)         3.41 (2.30)  <0.001                  2     20
+12         0.39 (0.22)         0.45 (0.23)  <0.001                  7      6
+13       68.73 (23.59)       57.38 (26.13)  <0.001                  7     12
+14       73.16 (11.11)        77.35 (8.99)  <0.001                  7     27
+15 48809.53 (22342.38) 59879.58 (25965.97)  <0.001                  7     30
+16       22.61 (15.61)       15.86 (12.88)  <0.001                  7     32
+17         0.00 (0.24)         0.12 (0.23)  <0.001                  7     52
+18         0.66 (0.27)         0.52 (0.30)  <0.001                  7     40
+19         0.35 (0.48)         0.48 (0.50)  <0.001                  2     23
+20         7.54 (2.62)         7.83 (2.37)   0.004                  3     61
+21         8.68 (3.16)         7.95 (2.95)  <0.001                  3     59
+          Gain       Cover   Frequency
+1  0.004777308 0.009947368 0.026666667
+2  0.001370004 0.004716242 0.013333333
+3  0.004832993 0.023205850 0.033333333
+4  0.031383307 0.077738905 0.093333333
+5  0.034464928 0.063271377 0.053333333
+6  0.346928223 0.146412379 0.100000000
+7  0.113404446 0.119919122 0.133333333
+8  0.123954524 0.129892108 0.106666667
+9           NA          NA          NA
+10 0.016867107 0.050836160 0.053333333
+11 0.002201753 0.012501360 0.020000000
+12 0.005062315 0.018001913 0.026666667
+13 0.008235150 0.011906083 0.013333333
+14 0.009295563 0.027813035 0.020000000
+15 0.015260208 0.010640348 0.006666667
+16 0.033149368 0.035421830 0.046666667
+17 0.199926288 0.114888573 0.100000000
+18 0.018271981 0.034292840 0.026666667
+19 0.003590566 0.016317797 0.013333333
+20 0.019616695 0.061178766 0.066666667
+21 0.005426770 0.020021677 0.033333333
+> 
+> write.csv(table_util_imp_label_gain,"/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/results/INR_tert_cryst_cvXgb_table_util_Missing_label_gain_upd.csv")
+> 
+> 
+> 
+> #-- Run a logistic regression with the top 20 important predictors selected by xgboost
+> glm_cvxgboost = glm(data=d_flpov, formula(paste("resilience ~ ",paste(table_util_imp$Variable[2:21], collapse ="+"), collapse = " ")), family="binomial")
+> 
+> summary(glm_cvxgboost)
+
+Call:
+glm(formula = formula(paste("resilience ~ ", paste(table_util_imp$Variable[2:21], 
+    collapse = "+"), collapse = " ")), family = "binomial", data = d_flpov)
+
+Deviance Residuals: 
+    Min       1Q   Median       3Q      Max  
+-1.9702  -0.7875  -0.5714   1.0126   2.6264  
+
+Coefficients:
+                                 Estimate Std. Error z value Pr(>|z|)    
+(Intercept)                    -7.506e+00  9.839e-01  -7.629 2.37e-14 ***
+demo_prtnr_ed_v2                8.836e-02  2.600e-02   3.398 0.000678 ***
+reshist_addr1_seg_ice_inc_bw    9.566e-01  4.926e-01   1.942 0.052166 .  
+inr                             3.913e-01  9.378e-02   4.173 3.01e-05 ***
+devhx_18_p                      8.609e-03  6.189e-03   1.391 0.164260    
+demo_prnt_ed_v2                 4.664e-02  3.038e-02   1.535 0.124684    
+reshist_addr1_coi_se_public     3.687e-03  6.672e-03   0.553 0.580563    
+cbcl_scr_syn_attention_r       -9.611e-02  1.566e-02  -6.136 8.48e-10 ***
+upps_y_ss_lack_of_planning      7.042e-02  2.008e-02   3.507 0.000453 ***
+reshist_addr1_svi_tot_20142018 -4.064e-01  3.335e-01  -1.218 0.223045    
+peer_deviance                   1.967e-02  5.677e-02   0.346 0.728987    
+reshist_addr1_coi_se_mhe       -4.377e-06  4.020e-06  -1.089 0.276297    
+reshist_addr1_coi_se_emprat     1.358e-02  6.818e-03   1.992 0.046342 *  
+reshist_addr1_coi_ed_schpov    -1.441e-04  3.109e-03  -0.046 0.963046    
+upps_y_ss_positive_urgency     -3.487e-02  1.669e-02  -2.089 0.036696 *  
+reshist_addr1_coi_ed_apenr      6.413e-01  2.252e-01   2.848 0.004400 ** 
+birth_weight                    1.540e-01  3.511e-02   4.386 1.15e-05 ***
+asr_scr_anxdep_t                4.554e-03  9.677e-03   0.471 0.637911    
+sai_p_perf_arts                 1.834e-01  1.002e-01   1.831 0.067079 .  
+physical_activity1_y            4.026e-02  2.078e-02   1.937 0.052698 .  
+asr_scr_attention_t             3.255e-02  9.893e-03   3.290 0.001002 ** 
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+(Dispersion parameter for binomial family taken to be 1)
+
+    Null deviance: 2872.0  on 2421  degrees of freedom
+Residual deviance: 2549.4  on 2401  degrees of freedom
+  (951 observations deleted due to missingness)
+AIC: 2591.4
+
+Number of Fisher Scoring iterations: 4
+
+> 
+> pred <- predict(glm_cvxgboost, newdata=d_flpov, type="response")
+> roc_test <- roc(labels, pred, algorithm = 2) 
+Setting levels: control = 0, case = 1
+Setting direction: controls < cases
+> roc_test$auc
+Area under the curve: 0.7278
+> 
+> #----------------------------------------------------#
+> #-- cross-validated XGBoost in complete cases data --#
+> 
+> 
+> d_pov_highflcog <- dat_all_inr_complete %>% filter(pov3_highcrcog==1) %>% 
++   mutate(profile="pov3_highcrcog",
++          resilience=1)
+> d_pov_lowflcog <- dat_all_inr_complete %>% filter(pov3_lowcrcog==1) %>% 
++   mutate(profile="pov3_lowcrcog",
++          resilience=0)
+> 
+> d_flpov <- rbind(d_pov_highflcog,d_pov_lowflcog)
+> 
+> set.seed(123)
+> labels <- d_flpov$resilience
+> 
+> names(d_flpov)
+  [1] "src_subject_id"                 "inr"                           
+  [3] "nihtbx_fluidcomp_agecorrected"  "nihtbx_cryst_agecorrected"     
+  [5] "nihtbx_totalcomp_agecorrected"  "fluid_s"                       
+  [7] "cryst_s"                        "totcomp_s"                     
+  [9] "inr_quart"                      "inr_tert"                      
+ [11] "pov_highflcog"                  "pov_lowflcog"                  
+ [13] "welloff_highflcog"              "welloff_lowflcog"              
+ [15] "pov_highcrcog"                  "pov_lowcrcog"                  
+ [17] "welloff_highcrcog"              "welloff_lowcrcog"              
+ [19] "pov3_highflcog"                 "pov3_lowflcog"                 
+ [21] "welloff3_highflcog"             "welloff3_lowflcog"             
+ [23] "pov3_highcrcog"                 "pov3_lowcrcog"                 
+ [25] "welloff3_highcrcog"             "welloff3_lowcrcog"             
+ [27] "rel_family_id"                  "interview_age"                 
+ [29] "srpf_y_ss_ses"                  "nsc_p_ss_mean_3_items"         
+ [31] "fes_p_ss_fc"                    "fes_y_ss_fc"                   
+ [33] "crpbi_y_ss_parent"              "crpbi_y_ss_caregiver"          
+ [35] "pmq_y_ss_mean"                  "psb_p_ss_mean"                 
+ [37] "psb_y_ss_mean"                  "reshist_addr1_coi_ed_attain"   
+ [39] "reshist_addr1_coi_ed_apenr"     "reshist_addr1_coi_ed_college"  
+ [41] "reshist_addr1_coi_ed_prxece"    "reshist_addr1_coi_ed_ecenrol"  
+ [43] "reshist_addr1_coi_ed_hsgrad"    "reshist_addr1_coi_ed_prxhqece" 
+ [45] "reshist_addr1_coi_ed_schpov"    "reshist_addr1_coi_ed_teachxp"  
+ [47] "reshist_addr1_coi_ed_math"      "reshist_addr1_coi_ed_reading"  
+ [49] "reshist_addr1_coi_he_green"     "reshist_addr1_coi_he_food"     
+ [51] "reshist_addr1_coi_he_pm25"      "reshist_addr1_coi_he_heat"     
+ [53] "reshist_addr1_coi_he_suprfnd"   "reshist_addr1_coi_he_hlthins"  
+ [55] "reshist_addr1_coi_he_vacancy"   "reshist_addr1_coi_he_rsei"     
+ [57] "reshist_addr1_coi_he_ozone"     "reshist_addr1_coi_he_walk"     
+ [59] "reshist_addr1_coi_se_jobprox"   "reshist_addr1_coi_se_emprat"   
+ [61] "reshist_addr1_coi_se_occ"       "reshist_addr1_coi_se_home"     
+ [63] "reshist_addr1_coi_se_mhe"       "reshist_addr1_coi_se_povrate"  
+ [65] "reshist_addr1_coi_se_public"    "reshist_addr1_coi_se_single"   
+ [67] "reshist_addr1_adi_perc"         "reshist_addr1_popdensity"      
+ [69] "reshist_addr1_urban_area"       "reshist_addr1_walkindex"       
+ [71] "reshist_addr1_traffic_count"    "reshist_addr1_proxrd"          
+ [73] "reshist_addr1_svi_tot_20142018" "reshist_addr1_p1vlnt"          
+ [75] "reshist_addr1_leadrisk"         "reshist_addr1_urbsat_ntl"      
+ [77] "reshist_addr1_seg_diss_nww_m"   "reshist_addr1_seg_inter_nww_m" 
+ [79] "reshist_addr1_seg_ice_income"   "reshist_addr1_seg_ice_inc_bw"  
+ [81] "reshist_addr1_seg_entropy_t"    "reshist_state_racism_factor"   
+ [83] "reshist_state_so_factor"        "reshist_state_sexism_factor"   
+ [85] "reshist_addr1_ACAexpand"        "demo_mar_livingwith"           
+ [87] "demo_prnt_ed_v2"                "demo_prtnr_ed_v2"              
+ [89] "demo_fam_exp1_v2"               "demo_fam_exp2_v2"              
+ [91] "demo_fam_exp3_v2"               "demo_fam_exp4_v2"              
+ [93] "demo_fam_exp5_v2"               "demo_fam_exp6_v2"              
+ [95] "demo_fam_exp7_v2"               "ksads_ptsd_raw_754_p"          
+ [97] "ksads_ptsd_raw_755_p"           "ksads_ptsd_raw_756_p"          
+ [99] "ksads_ptsd_raw_757_p"           "ksads_ptsd_raw_758_p"          
+[101] "ksads_ptsd_raw_759_p"           "ksads_ptsd_raw_760_p"          
+[103] "ksads_ptsd_raw_761_p"           "ksads_ptsd_raw_762_p"          
+[105] "ksads_ptsd_raw_763_p"           "ksads_ptsd_raw_764_p"          
+[107] "ksads_ptsd_raw_765_p"           "ksads_ptsd_raw_766_p"          
+[109] "ksads_ptsd_raw_767_p"           "ksads_ptsd_raw_768_p"          
+[111] "ksads_ptsd_raw_769_p"           "ksads_ptsd_raw_770_p"          
+[113] "ksads_ptsd_accident"            "ksads_ptsd_wit_viol"           
+[115] "ksads_ptsd_thr_viol"            "ksads_ptsd_phys_abuse"         
+[117] "ksads_ptsd_sexual_abuse"        "kbi_p_c_bully"                 
+[119] "famhx_ss_fath_prob_alc_p"       "famhx_ss_moth_prob_alc_p"      
+[121] "famhx_ss_moth_prob_dg_p"        "famhx_ss_fath_prob_dg_p"       
+[123] "famhx_ss_fath_prob_prf_p"       "famhx_ss_moth_prob_prf_p"      
+[125] "famhx_ss_moth_prob_hspd_p"      "famhx_ss_fath_prob_hspd_p"     
+[127] "asr_q06_p"                      "asr_q90_p"                     
+[129] "asr_q126_p"                     "asr_scr_anxdep_t"              
+[131] "asr_scr_withdrawn_t"            "asr_scr_somatic_t"             
+[133] "asr_scr_thought_t"              "asr_scr_attention_t"           
+[135] "asr_scr_aggressive_t"           "asr_scr_rulebreak_t"           
+[137] "asr_scr_intrusive_t"            "pubertal_sex_p"                
+[139] "pds_p_ss_cat"                   "birth_weight"                  
+[141] "devhx_3_p"                      "devhx_4_p"                     
+[143] "devhx_6_p"                      "preg_any_subst"                
+[145] "devhx_10"                       "preg_caffeine"                 
+[147] "birth_complications"            "devhx_13_3_p"                  
+[149] "devhx_18_p"                     "physical_activity1_y"          
+[151] "physical_activity5_y"           "sai_p_activities___24"         
+[153] "sai_p_perf_arts"                "sai_p_team_sports"             
+[155] "sai_p_non_team_sports"          "sai_p_other"                   
+[157] "sai_p_any"                      "sds_p_ss_dims"                 
+[159] "sds_p_ss_sbd"                   "sds_p_ss_da"                   
+[161] "sds_p_ss_swtd"                  "sds_p_ss_does"                 
+[163] "sds_p_ss_shy"                   "sds_p_ss_total"                
+[165] "screentime1_p_hours"            "screentime2_p_hours"           
+[167] "bis_y_ss_bas_drive"             "bis_y_ss_bas_fs"               
+[169] "bis_y_ss_bas_rr"                "bis_y_ss_bis_sum"              
+[171] "upps_y_ss_positive_urgency"     "upps_y_ss_negative_urgency"    
+[173] "upps_y_ss_lack_of_planning"     "upps_y_ss_lack_of_perseverance"
+[175] "upps_y_ss_sensation_seeking"    "cbcl_scr_syn_anxdep_r"         
+[177] "cbcl_scr_syn_withdep_r"         "cbcl_scr_syn_somatic_r"        
+[179] "cbcl_scr_syn_social_r"          "cbcl_scr_syn_thought_r"        
+[181] "cbcl_scr_syn_attention_r"       "cbcl_scr_syn_rulebreak_r"      
+[183] "cbcl_scr_syn_aggressive_r"      "num_friends"                   
+[185] "num_close_friends"              "parent_su_comm_risk"           
+[187] "parent_subst_rules"             "parent_no_subst_rules"         
+[189] "peer_deviance"                  "some_peer_deviance"            
+[191] "profile"                        "resilience"                    
+> new_tr <- as.matrix(d_flpov[,c(2,28:190)])
+> 
+> dtrain <- xgb.DMatrix(data = new_tr,label = labels) 
+> 
+> params <- list(booster = "gbtree", objective = "binary:logistic", 
++                eta=0.1, gamma=0.1, max_depth=2, 
++                min_child_weight=1, 
++                subsample=1, colsample_bytree=1)
+> 
+> xgbcv <- xgb.cv(params = params, data = dtrain, nrounds = 50, 
++                 nfold = 10,print_every_n = 10, 
++                 prediction=TRUE,
++                 maximize = F, eval="error")
+[1]	train-logloss:0.668425+0.000495	test-logloss:0.670305+0.002450 
+[11]	train-logloss:0.557654+0.002032	test-logloss:0.573749+0.013989 
+[21]	train-logloss:0.522293+0.002392	test-logloss:0.553163+0.016684 
+[31]	train-logloss:0.500565+0.002245	test-logloss:0.547316+0.018206 
+[41]	train-logloss:0.482911+0.002553	test-logloss:0.544245+0.018533 
+[50]	train-logloss:0.468671+0.002485	test-logloss:0.542569+0.018354 
+> xgbpred <- xgbcv$pred
+> 
+> summary(xgbpred)
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+0.04413 0.17712 0.26638 0.28882 0.38173 0.72363 
+> hist(xgbpred)
+> roc_test <- roc(labels, xgbpred, algorithm = 2) 
+Setting levels: control = 0, case = 1
+Setting direction: controls < cases
+> roc_test$auc
+Area under the curve: 0.7074
+> 
+> 
+> #-- Assess variable importance
+> 
+> xgb_util <- xgboost(data = new_tr, label = xgbpred, nrounds = 50, verbose=FALSE,params=params)
+> importance_matrix_util <- xgb.importance(model = xgb_util)
+> importance_matrix_util
+                           Feature         Gain       Cover   Frequency
+ 1:                            inr 0.3903095882 0.207015158 0.166666667
+ 2:               demo_prtnr_ed_v2 0.1752210731 0.145216227 0.133333333
+ 3:   reshist_addr1_seg_ice_inc_bw 0.1269042413 0.080713709 0.080000000
+ 4:    reshist_addr1_coi_se_public 0.0931811773 0.053341674 0.033333333
+ 5:       cbcl_scr_syn_attention_r 0.0479101930 0.099130081 0.106666667
+ 6: reshist_addr1_svi_tot_20142018 0.0406559625 0.024414125 0.026666667
+ 7:               asr_scr_anxdep_t 0.0266763789 0.082678820 0.080000000
+ 8:                     devhx_18_p 0.0188427319 0.060593188 0.046666667
+ 9:   reshist_addr1_seg_ice_income 0.0161447583 0.052380112 0.046666667
+10:   reshist_addr1_coi_se_jobprox 0.0158772242 0.040258836 0.046666667
+11:                   birth_weight 0.0092351984 0.045693470 0.060000000
+12:      reshist_addr1_coi_ed_math 0.0087436003 0.030829033 0.026666667
+13:       reshist_addr1_coi_se_occ 0.0074210356 0.012356150 0.013333333
+14:     reshist_addr1_coi_he_ozone 0.0050820591 0.011099912 0.033333333
+15:    reshist_addr1_coi_ed_schpov 0.0048681898 0.006506863 0.013333333
+16:                   sds_p_ss_sbd 0.0032691444 0.017273118 0.020000000
+17:    reshist_addr1_coi_ed_attain 0.0029445482 0.004059509 0.006666667
+18:              num_close_friends 0.0021567803 0.013033101 0.013333333
+19:      reshist_addr1_coi_he_walk 0.0014857540 0.004995773 0.013333333
+20:     reshist_addr1_coi_ed_apenr 0.0012508210 0.002196102 0.006666667
+21:       reshist_addr1_coi_se_mhe 0.0007780846 0.002243040 0.006666667
+22:    reshist_addr1_coi_se_single 0.0005767938 0.002165130 0.006666667
+23:              asr_scr_somatic_t 0.0004646620 0.001806868 0.013333333
+                           Feature         Gain       Cover   Frequency
+> ## Create table comparing distributions of top 20 important variables by any_util
+> vars <- as.vector(unlist(importance_matrix_util[1:20,1]))
+> imp <- data.frame(importance_matrix_util)
+> names(imp) <- c("Variable","Gain","Cover","Frequency")
+> 
+> table_util_imp <- CreateTableOne(vars = vars,
++                                  strata = c("resilience"), 
++                                  includeNA = F, 
++                                  addOverall = F,
++                                  data = d_flpov)
+> table_util_imp <- data.frame(print(table_util_imp, explain=F, missing=T, catDigits = 2, contDigits = 2))
+                                Stratified by resilience
+                                 0              1              p      test
+  n                                 973            392                    
+  inr                              1.00 (0.59)    1.28 (0.50)  <0.001     
+  demo_prtnr_ed_v2                13.02 (2.42)   14.33 (2.53)  <0.001     
+  reshist_addr1_seg_ice_inc_bw     0.02 (0.23)    0.14 (0.22)  <0.001     
+  reshist_addr1_coi_se_public     21.43 (14.33)  15.28 (12.23) <0.001     
+  cbcl_scr_syn_attention_r         3.47 (3.84)    2.60 (3.40)  <0.001     
+  reshist_addr1_svi_tot_20142018   0.64 (0.27)    0.51 (0.30)  <0.001     
+  asr_scr_anxdep_t                53.84 (6.47)   55.05 (6.98)   0.002     
+  devhx_18_p                       5.47 (7.36)    7.55 (7.67)  <0.001     
+  reshist_addr1_seg_ice_income    -0.07 (0.26)    0.06 (0.26)  <0.001     
+  reshist_addr1_coi_se_jobprox     7.94 (5.90)    6.66 (5.60)  <0.001     
+  birth_weight                     6.86 (1.46)    7.19 (1.38)  <0.001     
+  reshist_addr1_coi_ed_math      188.64 (68.02) 213.51 (63.26) <0.001     
+  reshist_addr1_coi_se_occ        30.29 (13.49)  35.34 (14.45) <0.001     
+  reshist_addr1_coi_he_ozone      37.90 (3.37)   38.24 (3.67)   0.100     
+  reshist_addr1_coi_ed_schpov     67.86 (24.05)  57.41 (25.77) <0.001     
+  sds_p_ss_sbd                     4.00 (1.46)    3.74 (1.04)   0.001     
+  reshist_addr1_coi_ed_attain     24.10 (15.34)  29.76 (17.21) <0.001     
+  num_close_friends                6.77 (13.10)   5.46 (7.15)   0.060     
+  reshist_addr1_coi_he_walk       11.53 (3.42)   11.41 (3.47)   0.555     
+  reshist_addr1_coi_ed_apenr       0.39 (0.22)    0.44 (0.22)  <0.001     
+                                Stratified by resilience
+                                 Missing
+  n                                     
+  inr                            0.0    
+  demo_prtnr_ed_v2               0.0    
+  reshist_addr1_seg_ice_inc_bw   0.0    
+  reshist_addr1_coi_se_public    0.0    
+  cbcl_scr_syn_attention_r       0.0    
+  reshist_addr1_svi_tot_20142018 0.0    
+  asr_scr_anxdep_t               0.0    
+  devhx_18_p                     0.0    
+  reshist_addr1_seg_ice_income   0.0    
+  reshist_addr1_coi_se_jobprox   0.0    
+  birth_weight                   0.0    
+  reshist_addr1_coi_ed_math      0.0    
+  reshist_addr1_coi_se_occ       0.0    
+  reshist_addr1_coi_he_ozone     0.0    
+  reshist_addr1_coi_ed_schpov    0.0    
+  sds_p_ss_sbd                   0.0    
+  reshist_addr1_coi_ed_attain    0.0    
+  num_close_friends              0.0    
+  reshist_addr1_coi_he_walk      0.0    
+  reshist_addr1_coi_ed_apenr     0.0    
+> table_util_imp <- tibble::rownames_to_column(table_util_imp, "Characteristic")[,c(1:5)]
+> table_util_imp
+                   Characteristic             X0             X1      p test
+1                               n            973            392            
+2                             inr    1.00 (0.59)    1.28 (0.50) <0.001     
+3                demo_prtnr_ed_v2   13.02 (2.42)   14.33 (2.53) <0.001     
+4    reshist_addr1_seg_ice_inc_bw    0.02 (0.23)    0.14 (0.22) <0.001     
+5     reshist_addr1_coi_se_public  21.43 (14.33)  15.28 (12.23) <0.001     
+6        cbcl_scr_syn_attention_r    3.47 (3.84)    2.60 (3.40) <0.001     
+7  reshist_addr1_svi_tot_20142018    0.64 (0.27)    0.51 (0.30) <0.001     
+8                asr_scr_anxdep_t   53.84 (6.47)   55.05 (6.98)  0.002     
+9                      devhx_18_p    5.47 (7.36)    7.55 (7.67) <0.001     
+10   reshist_addr1_seg_ice_income   -0.07 (0.26)    0.06 (0.26) <0.001     
+11   reshist_addr1_coi_se_jobprox    7.94 (5.90)    6.66 (5.60) <0.001     
+12                   birth_weight    6.86 (1.46)    7.19 (1.38) <0.001     
+13      reshist_addr1_coi_ed_math 188.64 (68.02) 213.51 (63.26) <0.001     
+14       reshist_addr1_coi_se_occ  30.29 (13.49)  35.34 (14.45) <0.001     
+15     reshist_addr1_coi_he_ozone   37.90 (3.37)   38.24 (3.67)  0.100     
+16    reshist_addr1_coi_ed_schpov  67.86 (24.05)  57.41 (25.77) <0.001     
+17                   sds_p_ss_sbd    4.00 (1.46)    3.74 (1.04)  0.001     
+18    reshist_addr1_coi_ed_attain  24.10 (15.34)  29.76 (17.21) <0.001     
+19              num_close_friends   6.77 (13.10)    5.46 (7.15)  0.060     
+20      reshist_addr1_coi_he_walk   11.53 (3.42)   11.41 (3.47)  0.555     
+21     reshist_addr1_coi_ed_apenr    0.39 (0.22)    0.44 (0.22) <0.001     
+> 
+> names(table_util_imp) <- c("Variable", "Poverty_Low_Cog", "Poverty_High_Cog","p_value","prop_missing")
+> 
+> table_util_imp_label <- merge(x=table_util_imp, y=dict, by="Variable",all.x=T) %>%
++   dplyr::select(Label,Variable,Poverty_Low_Cog,Poverty_High_Cog,p_value,prop_missing,Order,Order2)
+> 
+> table_util_imp_label_gain <- merge(x=table_util_imp_label, y=imp, all.x=T, by="Variable")
+> table_util_imp_label_gain
+                         Variable
+1                asr_scr_anxdep_t
+2                    birth_weight
+3        cbcl_scr_syn_attention_r
+4                demo_prtnr_ed_v2
+5                      devhx_18_p
+6                             inr
+7                               n
+8               num_close_friends
+9      reshist_addr1_coi_ed_apenr
+10    reshist_addr1_coi_ed_attain
+11      reshist_addr1_coi_ed_math
+12    reshist_addr1_coi_ed_schpov
+13     reshist_addr1_coi_he_ozone
+14      reshist_addr1_coi_he_walk
+15   reshist_addr1_coi_se_jobprox
+16       reshist_addr1_coi_se_occ
+17    reshist_addr1_coi_se_public
+18   reshist_addr1_seg_ice_inc_bw
+19   reshist_addr1_seg_ice_income
+20 reshist_addr1_svi_tot_20142018
+21                   sds_p_ss_sbd
+                                                                                                                                                                                                                                                                                                                                Label
+1                                                                                                                                                                                                                                              Parental psychopathology - adult self-report (parent) ASEBA: Anxious/depressed t-score
+2                                                                                                                                                                                                                                                                                 Developmental history quesitonnaire: birth weight: 
+3                                                                                                                                                                                                                              Child dimensional psychopathology - CBCL -  parent-reported: Attention CBCL Syndrome Scale (raw score)
+4                                                                                                                                                          Parental ed - secondary: What is the highest grade or level of school your partner completed or highest degree they received? (imputed with parent's education if missing)
+5                                                                                                                                                                                                                                                                  Developmental history questionnaire: nuumber of months breastfed: 
+6                                                                                                                                                                                                                                                                                                                                 INR
+7                                                                                                                                                                                                                                                                                                                                   n
+8                                                                                                                                                                                                                                                                                                             Number of close friends
+9                                                                                                                                                                                                   Neightbohood quality: Child opportunity index (COI) 2.0 - primary address: Education Domain: Advanced Placement course enrollment
+10                                                                                                                                                                                                          Neightbohood quality: Child opportunity index (COI) 2.0 - primary address: Education Domain: Adult educational attainment
+11                                                                                                                                                                                                          Neightbohood quality: Child opportunity index (COI) 2.0 - primary address: Education Domain: Third grade math proficiency
+12                                                                                                                                                                                                                        Neightbohood quality: Child opportunity index (COI) 2.0 - primary address: Education Domain: School poverty
+13                                                                                                                                                                                                      Neightbohood quality: Child opportunity index (COI) 2.0 - primary address: Health and Environment Domain: Ozone concentration
+14                                                                                                                                                                                                              Neightbohood quality: Child opportunity index (COI) 2.0 - primary address: Health and Environment Domain: Walkability
+15                                                                                                                                                                                                            Neightbohood quality: Child opportunity index (COI) 2.0 - primary address: Social and Economic Domain: Commute duration
+16                                                                                                                                                                                                       Neightbohood quality: Child opportunity index (COI) 2.0 - primary address: Social and Economic Domain: High-skill employment
+17                                                                                                                                                                                                      Neightbohood quality: Child opportunity index (COI) 2.0 - primary address: Social and Economic Domain: Public assistance rate
+18             Neighborhood: residential segregation - Index of Concentrations at the Extremes: Residential history derived- Index of Concentration at the Extremes(Income+ BW), (non-Hispanic white Households income >= $100k) - (non-Hispanic Black Households income < $25k)/total population, ACS2014-2018; census tract (addr1)
+19                                                      Neighborhood: residential segregation - Index of Concentrations at the Extremes: Residential history derived- Index of Concentration at the Extremes (income), (Households income >= $100k) - (Households income < $25k)/total population, ACS2014-2018; census tract (addr1)
+20 Neighborhood quality: Social Vulnerability Index (SVI) - overall: Residential history derived - Census tract CDC Social Vulnerability Index (SVI) (overall percentile) at primary residential address (ACS 2014-2018 5 yr avg) - based on 15 census variables indicating area\xd5s potential need for support following a disaster
+21                                                                                                                                                                                                                                                                                             Sleep: Sleep Breathing disorders (SBD)
+   Poverty_Low_Cog Poverty_High_Cog p_value prop_missing Order Order2
+1     53.84 (6.47)     55.05 (6.98)   0.002                  3     39
+2      6.86 (1.46)      7.19 (1.38)  <0.001                  2      2
+3      3.47 (3.84)      2.60 (3.40)  <0.001                  3     52
+4     13.02 (2.42)     14.33 (2.53)  <0.001                  1      2
+5      5.47 (7.36)      7.55 (7.67)  <0.001                  2     16
+6      1.00 (0.59)      1.28 (0.50)  <0.001                  0      1
+7              973              392                          0      0
+8     6.77 (13.10)      5.46 (7.15)   0.060                  3     67
+9      0.39 (0.22)      0.44 (0.22)  <0.001                  7      6
+10   24.10 (15.34)    29.76 (17.21)  <0.001                  7      5
+11  188.64 (68.02)   213.51 (63.26)  <0.001                  7     14
+12   67.86 (24.05)    57.41 (25.77)  <0.001                  7     12
+13    37.90 (3.37)     38.24 (3.67)   0.100                  7     24
+14    11.53 (3.42)     11.41 (3.47)   0.555                  7     25
+15     7.94 (5.90)      6.66 (5.60)  <0.001                  7     26
+16   30.29 (13.49)    35.34 (14.45)  <0.001                  7     28
+17   21.43 (14.33)    15.28 (12.23)  <0.001                  7     32
+18     0.02 (0.23)      0.14 (0.22)  <0.001                  7     52
+19    -0.07 (0.26)      0.06 (0.26)  <0.001                  7     51
+20     0.64 (0.27)      0.51 (0.30)  <0.001                  7     40
+21     4.00 (1.46)      3.74 (1.04)   0.001                  2     32
+          Gain       Cover   Frequency
+1  0.026676379 0.082678820 0.080000000
+2  0.009235198 0.045693470 0.060000000
+3  0.047910193 0.099130081 0.106666667
+4  0.175221073 0.145216227 0.133333333
+5  0.018842732 0.060593188 0.046666667
+6  0.390309588 0.207015158 0.166666667
+7           NA          NA          NA
+8  0.002156780 0.013033101 0.013333333
+9  0.001250821 0.002196102 0.006666667
+10 0.002944548 0.004059509 0.006666667
+11 0.008743600 0.030829033 0.026666667
+12 0.004868190 0.006506863 0.013333333
+13 0.005082059 0.011099912 0.033333333
+14 0.001485754 0.004995773 0.013333333
+15 0.015877224 0.040258836 0.046666667
+16 0.007421036 0.012356150 0.013333333
+17 0.093181177 0.053341674 0.033333333
+18 0.126904241 0.080713709 0.080000000
+19 0.016144758 0.052380112 0.046666667
+20 0.040655963 0.024414125 0.026666667
+21 0.003269144 0.017273118 0.020000000
+> 
+> write.csv(table_util_imp_label_gain,"/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/results/INR_tert_cryst_cvXgb_complete_cases_table_util_imp_label_gain_upd.csv")
+> 
+> 
+> #-- Run a logistic regression with the top 20 important predictors selected by xgboost
+> glm_cvxgboost = glm(data=d_flpov, formula(paste("resilience ~ ",paste(table_util_imp$Variable[2:21], collapse ="+"), collapse = " ")), family="binomial")
+> 
+> summary(glm_cvxgboost)
+
+Call:
+glm(formula = formula(paste("resilience ~ ", paste(table_util_imp$Variable[2:21], 
+    collapse = "+"), collapse = " ")), family = "binomial", data = d_flpov)
+
+Deviance Residuals: 
+    Min       1Q   Median       3Q      Max  
+-1.6719  -0.8093  -0.5586   1.0038   2.4940  
+
+Coefficients:
+                                 Estimate Std. Error z value Pr(>|z|)    
+(Intercept)                    -6.2036870  1.3923679  -4.455 8.37e-06 ***
+inr                             0.5759585  0.1269668   4.536 5.73e-06 ***
+demo_prtnr_ed_v2                0.1438464  0.0302119   4.761 1.92e-06 ***
+reshist_addr1_seg_ice_inc_bw    0.9424866  0.7354239   1.282   0.2000    
+reshist_addr1_coi_se_public    -0.0093009  0.0095814  -0.971   0.3317    
+cbcl_scr_syn_attention_r       -0.0816798  0.0202470  -4.034 5.48e-05 ***
+reshist_addr1_svi_tot_20142018 -0.8305094  0.4714779  -1.762   0.0782 .  
+asr_scr_anxdep_t                0.0432275  0.0100957   4.282 1.85e-05 ***
+devhx_18_p                      0.0095921  0.0086442   1.110   0.2671    
+reshist_addr1_seg_ice_income   -0.2800423  0.6365827  -0.440   0.6600    
+reshist_addr1_coi_se_jobprox   -0.0131389  0.0129601  -1.014   0.3107    
+birth_weight                    0.1411223  0.0458739   3.076   0.0021 ** 
+reshist_addr1_coi_ed_math       0.0006486  0.0015348   0.423   0.6726    
+reshist_addr1_coi_se_occ        0.0027098  0.0125741   0.216   0.8294    
+reshist_addr1_coi_he_ozone     -0.0032989  0.0200412  -0.165   0.8693    
+reshist_addr1_coi_ed_schpov     0.0041939  0.0047474   0.883   0.3770    
+sds_p_ss_sbd                   -0.0872803  0.0562601  -1.551   0.1208    
+reshist_addr1_coi_ed_attain    -0.0155868  0.0104223  -1.496   0.1348    
+num_close_friends              -0.0143307  0.0087086  -1.646   0.0998 .  
+reshist_addr1_coi_he_walk       0.0347450  0.0205018   1.695   0.0901 .  
+reshist_addr1_coi_ed_apenr      0.6505729  0.3168078   2.054   0.0400 *  
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+(Dispersion parameter for binomial family taken to be 1)
+
+    Null deviance: 1636.9  on 1364  degrees of freedom
+Residual deviance: 1438.5  on 1344  degrees of freedom
+AIC: 1480.5
+
+Number of Fisher Scoring iterations: 5
+
+> 
+> pred <- predict(glm_cvxgboost, newdata=d_flpov, type="response")
+> roc_test <- roc(labels, pred, algorithm = 2) 
+Setting levels: control = 0, case = 1
+Setting direction: controls < cases
+> roc_test$auc
+Area under the curve: 0.7322
+> 
+> #------------------------------------------------#
+> #-- cross-validated XGBoost in 1x imputed data --#
+> 
+> d <- complete(d_imp)
+> 
+> d_pov_highflcog <- d %>% filter(pov3_highcrcog==1) %>% 
++   mutate(profile="pov3_highcrcog",
++          resilience=1)
+> d_pov_lowflcog <- d %>% filter(pov3_lowcrcog==1) %>% 
++   mutate(profile="pov3_lowcrcog",
++          resilience=0)
+> 
+> d_flpov <- rbind(d_pov_highflcog,d_pov_lowflcog)
+> 
+> set.seed(123)
+> labels <- d_flpov$resilience
+> 
+> names(d_flpov)
+  [1] "src_subject_id"                 "inr"                           
+  [3] "nihtbx_fluidcomp_agecorrected"  "nihtbx_cryst_agecorrected"     
+  [5] "nihtbx_totalcomp_agecorrected"  "fluid_s"                       
+  [7] "cryst_s"                        "totcomp_s"                     
+  [9] "inr_quart"                      "inr_tert"                      
+ [11] "pov_highflcog"                  "pov_lowflcog"                  
+ [13] "welloff_highflcog"              "welloff_lowflcog"              
+ [15] "pov_highcrcog"                  "pov_lowcrcog"                  
+ [17] "welloff_highcrcog"              "welloff_lowcrcog"              
+ [19] "pov3_highflcog"                 "pov3_lowflcog"                 
+ [21] "welloff3_highflcog"             "welloff3_lowflcog"             
+ [23] "pov3_highcrcog"                 "pov3_lowcrcog"                 
+ [25] "welloff3_highcrcog"             "welloff3_lowcrcog"             
+ [27] "rel_family_id"                  "interview_age"                 
+ [29] "srpf_y_ss_ses"                  "nsc_p_ss_mean_3_items"         
+ [31] "fes_p_ss_fc"                    "fes_y_ss_fc"                   
+ [33] "crpbi_y_ss_parent"              "crpbi_y_ss_caregiver"          
+ [35] "pmq_y_ss_mean"                  "psb_p_ss_mean"                 
+ [37] "psb_y_ss_mean"                  "reshist_addr1_coi_ed_attain"   
+ [39] "reshist_addr1_coi_ed_apenr"     "reshist_addr1_coi_ed_college"  
+ [41] "reshist_addr1_coi_ed_prxece"    "reshist_addr1_coi_ed_ecenrol"  
+ [43] "reshist_addr1_coi_ed_hsgrad"    "reshist_addr1_coi_ed_prxhqece" 
+ [45] "reshist_addr1_coi_ed_schpov"    "reshist_addr1_coi_ed_teachxp"  
+ [47] "reshist_addr1_coi_ed_math"      "reshist_addr1_coi_ed_reading"  
+ [49] "reshist_addr1_coi_he_green"     "reshist_addr1_coi_he_food"     
+ [51] "reshist_addr1_coi_he_pm25"      "reshist_addr1_coi_he_heat"     
+ [53] "reshist_addr1_coi_he_suprfnd"   "reshist_addr1_coi_he_hlthins"  
+ [55] "reshist_addr1_coi_he_vacancy"   "reshist_addr1_coi_he_rsei"     
+ [57] "reshist_addr1_coi_he_ozone"     "reshist_addr1_coi_he_walk"     
+ [59] "reshist_addr1_coi_se_jobprox"   "reshist_addr1_coi_se_emprat"   
+ [61] "reshist_addr1_coi_se_occ"       "reshist_addr1_coi_se_home"     
+ [63] "reshist_addr1_coi_se_mhe"       "reshist_addr1_coi_se_povrate"  
+ [65] "reshist_addr1_coi_se_public"    "reshist_addr1_coi_se_single"   
+ [67] "reshist_addr1_adi_perc"         "reshist_addr1_popdensity"      
+ [69] "reshist_addr1_urban_area"       "reshist_addr1_walkindex"       
+ [71] "reshist_addr1_traffic_count"    "reshist_addr1_proxrd"          
+ [73] "reshist_addr1_svi_tot_20142018" "reshist_addr1_p1vlnt"          
+ [75] "reshist_addr1_leadrisk"         "reshist_addr1_urbsat_ntl"      
+ [77] "reshist_addr1_seg_diss_nww_m"   "reshist_addr1_seg_inter_nww_m" 
+ [79] "reshist_addr1_seg_ice_income"   "reshist_addr1_seg_ice_inc_bw"  
+ [81] "reshist_addr1_seg_entropy_t"    "reshist_state_racism_factor"   
+ [83] "reshist_state_so_factor"        "reshist_state_sexism_factor"   
+ [85] "reshist_addr1_ACAexpand"        "demo_mar_livingwith"           
+ [87] "demo_prnt_ed_v2"                "demo_prtnr_ed_v2"              
+ [89] "demo_fam_exp1_v2"               "demo_fam_exp2_v2"              
+ [91] "demo_fam_exp3_v2"               "demo_fam_exp4_v2"              
+ [93] "demo_fam_exp5_v2"               "demo_fam_exp6_v2"              
+ [95] "demo_fam_exp7_v2"               "ksads_ptsd_raw_754_p"          
+ [97] "ksads_ptsd_raw_755_p"           "ksads_ptsd_raw_756_p"          
+ [99] "ksads_ptsd_raw_757_p"           "ksads_ptsd_raw_758_p"          
+[101] "ksads_ptsd_raw_759_p"           "ksads_ptsd_raw_760_p"          
+[103] "ksads_ptsd_raw_761_p"           "ksads_ptsd_raw_762_p"          
+[105] "ksads_ptsd_raw_763_p"           "ksads_ptsd_raw_764_p"          
+[107] "ksads_ptsd_raw_765_p"           "ksads_ptsd_raw_766_p"          
+[109] "ksads_ptsd_raw_767_p"           "ksads_ptsd_raw_768_p"          
+[111] "ksads_ptsd_raw_769_p"           "ksads_ptsd_raw_770_p"          
+[113] "ksads_ptsd_accident"            "ksads_ptsd_wit_viol"           
+[115] "ksads_ptsd_thr_viol"            "ksads_ptsd_phys_abuse"         
+[117] "ksads_ptsd_sexual_abuse"        "kbi_p_c_bully"                 
+[119] "famhx_ss_fath_prob_alc_p"       "famhx_ss_moth_prob_alc_p"      
+[121] "famhx_ss_moth_prob_dg_p"        "famhx_ss_fath_prob_dg_p"       
+[123] "famhx_ss_fath_prob_prf_p"       "famhx_ss_moth_prob_prf_p"      
+[125] "famhx_ss_moth_prob_hspd_p"      "famhx_ss_fath_prob_hspd_p"     
+[127] "asr_q06_p"                      "asr_q90_p"                     
+[129] "asr_q126_p"                     "asr_scr_anxdep_t"              
+[131] "asr_scr_withdrawn_t"            "asr_scr_somatic_t"             
+[133] "asr_scr_thought_t"              "asr_scr_attention_t"           
+[135] "asr_scr_aggressive_t"           "asr_scr_rulebreak_t"           
+[137] "asr_scr_intrusive_t"            "pubertal_sex_p"                
+[139] "pds_p_ss_cat"                   "birth_weight"                  
+[141] "devhx_3_p"                      "devhx_4_p"                     
+[143] "devhx_6_p"                      "preg_any_subst"                
+[145] "devhx_10"                       "preg_caffeine"                 
+[147] "birth_complications"            "devhx_13_3_p"                  
+[149] "devhx_18_p"                     "physical_activity1_y"          
+[151] "physical_activity5_y"           "sai_p_activities___24"         
+[153] "sai_p_perf_arts"                "sai_p_team_sports"             
+[155] "sai_p_non_team_sports"          "sai_p_other"                   
+[157] "sai_p_any"                      "sds_p_ss_dims"                 
+[159] "sds_p_ss_sbd"                   "sds_p_ss_da"                   
+[161] "sds_p_ss_swtd"                  "sds_p_ss_does"                 
+[163] "sds_p_ss_shy"                   "sds_p_ss_total"                
+[165] "screentime1_p_hours"            "screentime2_p_hours"           
+[167] "bis_y_ss_bas_drive"             "bis_y_ss_bas_fs"               
+[169] "bis_y_ss_bas_rr"                "bis_y_ss_bis_sum"              
+[171] "upps_y_ss_positive_urgency"     "upps_y_ss_negative_urgency"    
+[173] "upps_y_ss_lack_of_planning"     "upps_y_ss_lack_of_perseverance"
+[175] "upps_y_ss_sensation_seeking"    "cbcl_scr_syn_anxdep_r"         
+[177] "cbcl_scr_syn_withdep_r"         "cbcl_scr_syn_somatic_r"        
+[179] "cbcl_scr_syn_social_r"          "cbcl_scr_syn_thought_r"        
+[181] "cbcl_scr_syn_attention_r"       "cbcl_scr_syn_rulebreak_r"      
+[183] "cbcl_scr_syn_aggressive_r"      "num_friends"                   
+[185] "num_close_friends"              "parent_su_comm_risk"           
+[187] "parent_subst_rules"             "parent_no_subst_rules"         
+[189] "peer_deviance"                  "some_peer_deviance"            
+[191] "profile"                        "resilience"                    
+> new_tr <- as.matrix(d_flpov[,c(2,28:190)])
+> 
+> dtrain <- xgb.DMatrix(data = new_tr,label = labels) 
+> 
+> params <- list(booster = "gbtree", objective = "binary:logistic", 
++                eta=0.1, gamma=0.1, max_depth=2, 
++                min_child_weight=1, 
++                subsample=1, colsample_bytree=1)
+> 
+> xgbcv <- xgb.cv(params = params, data = dtrain, nrounds = 50, 
++                 nfold = 10,print_every_n = 10, 
++                 prediction=TRUE,
++                 maximize = F, eval="error")
+[1]	train-logloss:0.666173+0.000458	test-logloss:0.666719+0.002365 
+[11]	train-logloss:0.552255+0.002351	test-logloss:0.559612+0.016499 
+[21]	train-logloss:0.522179+0.002899	test-logloss:0.537364+0.022556 
+[31]	train-logloss:0.506127+0.002980	test-logloss:0.528331+0.024782 
+[41]	train-logloss:0.493990+0.002983	test-logloss:0.523543+0.026237 
+[50]	train-logloss:0.484890+0.003065	test-logloss:0.519520+0.025871 
+> xgbpred <- xgbcv$pred
+> 
+> summary(xgbpred)
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+0.05542 0.17180 0.24127 0.26432 0.33028 0.72244 
+> hist(xgbpred)
+> roc_test <- roc(labels, xgbpred, algorithm = 2) 
+Setting levels: control = 0, case = 1
+Setting direction: controls < cases
+> roc_test$auc
+Area under the curve: 0.7191
+> 
+> #-- Assess variable importance
+> 
+> xgb_util <- xgboost(data = new_tr, label = xgbpred, params = params, nrounds = 50, verbose=FALSE)
+> importance_matrix_util <- xgb.importance(model = xgb_util)
+> importance_matrix_util
+                           Feature         Gain       Cover   Frequency
+ 1:               demo_prtnr_ed_v2 0.3786736628 0.156225587 0.113333333
+ 2:   reshist_addr1_seg_ice_inc_bw 0.1469850471 0.088949763 0.073333333
+ 3:                            inr 0.1344498633 0.136745183 0.120000000
+ 4:                     devhx_18_p 0.0656595161 0.089131438 0.093333333
+ 5:       cbcl_scr_syn_attention_r 0.0374449372 0.085441384 0.113333333
+ 6:       reshist_addr1_coi_se_mhe 0.0372648102 0.021796915 0.013333333
+ 7:                demo_prnt_ed_v2 0.0354262753 0.064184181 0.053333333
+ 8:    reshist_addr1_coi_se_public 0.0317828842 0.035394561 0.046666667
+ 9:   reshist_addr1_seg_ice_income 0.0295833883 0.018610647 0.020000000
+10:     upps_y_ss_lack_of_planning 0.0203516367 0.059858616 0.073333333
+11:     reshist_addr1_coi_ed_apenr 0.0170009498 0.044525815 0.053333333
+12:    reshist_addr1_coi_ed_schpov 0.0113074151 0.011612839 0.013333333
+13:                   birth_weight 0.0099930472 0.038380632 0.053333333
+14:         reshist_addr1_adi_perc 0.0070455793 0.008692731 0.013333333
+15:     upps_y_ss_positive_urgency 0.0069782037 0.021326499 0.033333333
+16:   reshist_addr1_coi_se_povrate 0.0054397478 0.018098614 0.020000000
+17:               asr_scr_anxdep_t 0.0054176986 0.025782019 0.020000000
+18:    reshist_addr1_coi_se_single 0.0044537250 0.009457113 0.006666667
+19:    reshist_addr1_coi_se_emprat 0.0042320691 0.013019515 0.013333333
+20:           physical_activity1_y 0.0039518718 0.019107822 0.020000000
+21:                sai_p_perf_arts 0.0031338886 0.014107097 0.013333333
+22:            parent_su_comm_risk 0.0016362462 0.009084457 0.006666667
+23: reshist_addr1_svi_tot_20142018 0.0009814422 0.006366484 0.006666667
+24:            asr_scr_attention_t 0.0008060942 0.004100088 0.006666667
+                           Feature         Gain       Cover   Frequency
+> ## Create table comparing distributions of top 20 important variables by any_util
+> vars <- as.vector(unlist(importance_matrix_util[1:20,1]))
+> imp <- data.frame(importance_matrix_util)
+> names(imp) <- c("Variable","Gain","Cover","Frequency")
+> 
+> table_util_imp <- CreateTableOne(vars = vars,
++                                  strata = c("resilience"), 
++                                  includeNA = F, 
++                                  addOverall = F,
++                                  data = d_flpov)
+> table_util_imp <- data.frame(print(table_util_imp, explain=F, missing=T, catDigits = 2, contDigits = 2))
+                              Stratified by resilience
+                               0                   1                   p     
+  n                                2485                 888                  
+  demo_prtnr_ed_v2                12.80 (2.51)        14.03 (2.70)     <0.001
+  reshist_addr1_seg_ice_inc_bw     0.02 (0.24)         0.13 (0.23)     <0.001
+  inr                              0.94 (0.59)         1.21 (0.56)     <0.001
+  devhx_18_p                       5.35 (7.61)         7.58 (8.10)     <0.001
+  cbcl_scr_syn_attention_r         3.67 (3.87)         2.81 (3.49)     <0.001
+  reshist_addr1_coi_se_mhe     49973.96 (23540.10) 60627.79 (26420.20) <0.001
+  demo_prnt_ed_v2                 13.26 (2.23)        14.23 (2.17)     <0.001
+  reshist_addr1_coi_se_public     21.76 (15.30)       15.65 (12.57)    <0.001
+  reshist_addr1_seg_ice_income    -0.08 (0.28)         0.05 (0.27)     <0.001
+  upps_y_ss_lack_of_planning       7.55 (2.62)         7.83 (2.36)      0.004
+  reshist_addr1_coi_ed_apenr       0.39 (0.22)         0.45 (0.23)     <0.001
+  reshist_addr1_coi_ed_schpov     67.09 (23.77)       57.01 (25.65)    <0.001
+  birth_weight                     6.84 (1.46)         7.17 (1.37)     <0.001
+  reshist_addr1_adi_perc          57.91 (27.59)       48.44 (26.35)    <0.001
+  upps_y_ss_positive_urgency       8.68 (3.16)         7.95 (2.95)     <0.001
+  reshist_addr1_coi_se_povrate    21.25 (13.71)       15.99 (11.65)    <0.001
+  asr_scr_anxdep_t                54.20 (6.82)        55.08 (6.86)      0.001
+  reshist_addr1_coi_se_single     46.42 (21.50)       38.02 (19.29)    <0.001
+  reshist_addr1_coi_se_emprat     73.70 (11.09)       77.37 (9.05)     <0.001
+  physical_activity1_y             3.00 (2.38)         3.42 (2.30)     <0.001
+                              Stratified by resilience
+                               test Missing
+  n                                        
+  demo_prtnr_ed_v2                  0.0    
+  reshist_addr1_seg_ice_inc_bw      0.0    
+  inr                               0.0    
+  devhx_18_p                        0.0    
+  cbcl_scr_syn_attention_r          0.0    
+  reshist_addr1_coi_se_mhe          0.0    
+  demo_prnt_ed_v2                   0.0    
+  reshist_addr1_coi_se_public       0.0    
+  reshist_addr1_seg_ice_income      0.0    
+  upps_y_ss_lack_of_planning        0.0    
+  reshist_addr1_coi_ed_apenr        0.0    
+  reshist_addr1_coi_ed_schpov       0.0    
+  birth_weight                      0.0    
+  reshist_addr1_adi_perc            0.0    
+  upps_y_ss_positive_urgency        0.0    
+  reshist_addr1_coi_se_povrate      0.0    
+  asr_scr_anxdep_t                  0.0    
+  reshist_addr1_coi_se_single       0.0    
+  reshist_addr1_coi_se_emprat       0.0    
+  physical_activity1_y              0.0    
+> table_util_imp <- tibble::rownames_to_column(table_util_imp, "Characteristic")[,c(1:5)]
+> table_util_imp
+                 Characteristic                  X0                  X1      p
+1                             n                2485                 888       
+2              demo_prtnr_ed_v2        12.80 (2.51)        14.03 (2.70) <0.001
+3  reshist_addr1_seg_ice_inc_bw         0.02 (0.24)         0.13 (0.23) <0.001
+4                           inr         0.94 (0.59)         1.21 (0.56) <0.001
+5                    devhx_18_p         5.35 (7.61)         7.58 (8.10) <0.001
+6      cbcl_scr_syn_attention_r         3.67 (3.87)         2.81 (3.49) <0.001
+7      reshist_addr1_coi_se_mhe 49973.96 (23540.10) 60627.79 (26420.20) <0.001
+8               demo_prnt_ed_v2        13.26 (2.23)        14.23 (2.17) <0.001
+9   reshist_addr1_coi_se_public       21.76 (15.30)       15.65 (12.57) <0.001
+10 reshist_addr1_seg_ice_income        -0.08 (0.28)         0.05 (0.27) <0.001
+11   upps_y_ss_lack_of_planning         7.55 (2.62)         7.83 (2.36)  0.004
+12   reshist_addr1_coi_ed_apenr         0.39 (0.22)         0.45 (0.23) <0.001
+13  reshist_addr1_coi_ed_schpov       67.09 (23.77)       57.01 (25.65) <0.001
+14                 birth_weight         6.84 (1.46)         7.17 (1.37) <0.001
+15       reshist_addr1_adi_perc       57.91 (27.59)       48.44 (26.35) <0.001
+16   upps_y_ss_positive_urgency         8.68 (3.16)         7.95 (2.95) <0.001
+17 reshist_addr1_coi_se_povrate       21.25 (13.71)       15.99 (11.65) <0.001
+18             asr_scr_anxdep_t        54.20 (6.82)        55.08 (6.86)  0.001
+19  reshist_addr1_coi_se_single       46.42 (21.50)       38.02 (19.29) <0.001
+20  reshist_addr1_coi_se_emprat       73.70 (11.09)        77.37 (9.05) <0.001
+21         physical_activity1_y         3.00 (2.38)         3.42 (2.30) <0.001
+   test
+1      
+2      
+3      
+4      
+5      
+6      
+7      
+8      
+9      
+10     
+11     
+12     
+13     
+14     
+15     
+16     
+17     
+18     
+19     
+20     
+21     
+> 
+> names(table_util_imp) <- c("Variable", "Poverty_Low_Cog", "Poverty_High_Cog","p_value","prop_missing")
+> 
+> table_util_imp_label <- merge(x=table_util_imp, y=dict, by="Variable",all.x=T) %>%
++   dplyr::select(Label,Variable,Poverty_Low_Cog,Poverty_High_Cog,p_value,prop_missing,Order,Order2)
+> 
+> table_util_imp_label_gain <- merge(x=table_util_imp_label, y=imp, all.x=T, by="Variable")
+> table_util_imp_label_gain
+                       Variable
+1              asr_scr_anxdep_t
+2                  birth_weight
+3      cbcl_scr_syn_attention_r
+4               demo_prnt_ed_v2
+5              demo_prtnr_ed_v2
+6                    devhx_18_p
+7                           inr
+8                             n
+9          physical_activity1_y
+10       reshist_addr1_adi_perc
+11   reshist_addr1_coi_ed_apenr
+12  reshist_addr1_coi_ed_schpov
+13  reshist_addr1_coi_se_emprat
+14     reshist_addr1_coi_se_mhe
+15 reshist_addr1_coi_se_povrate
+16  reshist_addr1_coi_se_public
+17  reshist_addr1_coi_se_single
+18 reshist_addr1_seg_ice_inc_bw
+19 reshist_addr1_seg_ice_income
+20   upps_y_ss_lack_of_planning
+21   upps_y_ss_positive_urgency
+                                                                                                                                                                                                                                                                                                                    Label
+1                                                                                                                                                                                                                                  Parental psychopathology - adult self-report (parent) ASEBA: Anxious/depressed t-score
+2                                                                                                                                                                                                                                                                     Developmental history quesitonnaire: birth weight: 
+3                                                                                                                                                                                                                  Child dimensional psychopathology - CBCL -  parent-reported: Attention CBCL Syndrome Scale (raw score)
+4                                                                                                                                                                                        Parental ed - primary: What is the highest grade or level of school you have completed or the highest degree you have received? 
+5                                                                                                                                              Parental ed - secondary: What is the highest grade or level of school your partner completed or highest degree they received? (imputed with parent's education if missing)
+6                                                                                                                                                                                                                                                      Developmental history questionnaire: nuumber of months breastfed: 
+7                                                                                                                                                                                                                                                                                                                     INR
+8                                                                                                                                                                                                                                                                                                                       n
+9                                           Physical activity: During the past 7 days, on how many days were you physically active for a total of at least 60 minutes per day? (Add up all the time you spent in any kind of physical activity that increased your heart rate and made you breathe hard some of the time)
+10                                                                                                                                                                                                                   Neightbohood quality: Area Deprivation Index (national percentiles, higher means higher deprivation)
+11                                                                                                                                                                                      Neightbohood quality: Child opportunity index (COI) 2.0 - primary address: Education Domain: Advanced Placement course enrollment
+12                                                                                                                                                                                                            Neightbohood quality: Child opportunity index (COI) 2.0 - primary address: Education Domain: School poverty
+13                                                                                                                                                                                                 Neightbohood quality: Child opportunity index (COI) 2.0 - primary address: Social and Economic Domain: Employment rate
+14                                                                                                                                                                                         Neightbohood quality: Child opportunity index (COI) 2.0 - primary address: Social and Economic Domain: Median household income
+15                                                                                                                                                                                                    Neightbohood quality: Child opportunity index (COI) 2.0 - primary address: Social and Economic Domain: Poverty rate
+16                                                                                                                                                                                          Neightbohood quality: Child opportunity index (COI) 2.0 - primary address: Social and Economic Domain: Public assistance rate
+17                                                                                                                                                                                        Neightbohood quality: Child opportunity index (COI) 2.0 - primary address: Social and Economic Domain: Single-headed households
+18 Neighborhood: residential segregation - Index of Concentrations at the Extremes: Residential history derived- Index of Concentration at the Extremes(Income+ BW), (non-Hispanic white Households income >= $100k) - (non-Hispanic Black Households income < $25k)/total population, ACS2014-2018; census tract (addr1)
+19                                          Neighborhood: residential segregation - Index of Concentrations at the Extremes: Residential history derived- Index of Concentration at the Extremes (income), (Households income >= $100k) - (Households income < $25k)/total population, ACS2014-2018; census tract (addr1)
+20                                                                                 Temperament/Personality: UPPS-P (Urgency, Premeditation, Perseverance, Sensation Seeking, Positive Urgency, Impulsive behavior scale): Lack of Premeditation: tendency to act rashly without first reflecting upon the decision to act
+21                                                                                                            Temperament/Personality: UPPS-P (Urgency, Premeditation, Perseverance, Sensation Seeking, Positive Urgency, Impulsive behavior scale): Positive Urgency: tendency to act impulsively due to positive affect
+       Poverty_Low_Cog    Poverty_High_Cog p_value prop_missing Order Order2
+1         54.20 (6.82)        55.08 (6.86)   0.001                  3     39
+2          6.84 (1.46)         7.17 (1.37)  <0.001                  2      2
+3          3.67 (3.87)         2.81 (3.49)  <0.001                  3     52
+4         13.26 (2.23)        14.23 (2.17)  <0.001                  1      1
+5         12.80 (2.51)        14.03 (2.70)  <0.001                  1      2
+6          5.35 (7.61)         7.58 (8.10)  <0.001                  2     16
+7          0.94 (0.59)         1.21 (0.56)  <0.001                  0      1
+8                 2485                 888                          0      0
+9          3.00 (2.38)         3.42 (2.30)  <0.001                  2     20
+10       57.91 (27.59)       48.44 (26.35)  <0.001                  7      1
+11         0.39 (0.22)         0.45 (0.23)  <0.001                  7      6
+12       67.09 (23.77)       57.01 (25.65)  <0.001                  7     12
+13       73.70 (11.09)        77.37 (9.05)  <0.001                  7     27
+14 49973.96 (23540.10) 60627.79 (26420.20)  <0.001                  7     30
+15       21.25 (13.71)       15.99 (11.65)  <0.001                  7     31
+16       21.76 (15.30)       15.65 (12.57)  <0.001                  7     32
+17       46.42 (21.50)       38.02 (19.29)  <0.001                  7     33
+18         0.02 (0.24)         0.13 (0.23)  <0.001                  7     52
+19        -0.08 (0.28)         0.05 (0.27)  <0.001                  7     51
+20         7.55 (2.62)         7.83 (2.36)   0.004                  3     61
+21         8.68 (3.16)         7.95 (2.95)  <0.001                  3     59
+          Gain       Cover   Frequency
+1  0.005417699 0.025782019 0.020000000
+2  0.009993047 0.038380632 0.053333333
+3  0.037444937 0.085441384 0.113333333
+4  0.035426275 0.064184181 0.053333333
+5  0.378673663 0.156225587 0.113333333
+6  0.065659516 0.089131438 0.093333333
+7  0.134449863 0.136745183 0.120000000
+8           NA          NA          NA
+9  0.003951872 0.019107822 0.020000000
+10 0.007045579 0.008692731 0.013333333
+11 0.017000950 0.044525815 0.053333333
+12 0.011307415 0.011612839 0.013333333
+13 0.004232069 0.013019515 0.013333333
+14 0.037264810 0.021796915 0.013333333
+15 0.005439748 0.018098614 0.020000000
+16 0.031782884 0.035394561 0.046666667
+17 0.004453725 0.009457113 0.006666667
+18 0.146985047 0.088949763 0.073333333
+19 0.029583388 0.018610647 0.020000000
+20 0.020351637 0.059858616 0.073333333
+21 0.006978204 0.021326499 0.033333333
+> 
+> write.csv(table_util_imp_label_gain,"/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/results/INR_tert_cryst_cvXgb_imputed1x_table_util_imp_label_gain_upd.csv")
+> 
+> 
+> #-- Run a logistic regression with the top 20 important predictors selected by xgboost
+> glm_cvxgboost = glm(data=d_flpov, formula(paste("resilience ~ ",paste(table_util_imp$Variable[2:21], collapse ="+"), collapse = " ")), family="binomial")
+> 
+> summary(glm_cvxgboost)
+
+Call:
+glm(formula = formula(paste("resilience ~ ", paste(table_util_imp$Variable[2:21], 
+    collapse = "+"), collapse = " ")), family = "binomial", data = d_flpov)
+
+Deviance Residuals: 
+    Min       1Q   Median       3Q      Max  
+-1.7981  -0.7697  -0.5609   0.9225   2.6154  
+
+Coefficients:
+                               Estimate Std. Error z value Pr(>|z|)    
+(Intercept)                  -7.281e+00  8.440e-01  -8.627  < 2e-16 ***
+demo_prtnr_ed_v2              8.994e-02  2.222e-02   4.048 5.16e-05 ***
+reshist_addr1_seg_ice_inc_bw  5.802e-01  4.610e-01   1.258 0.208250    
+inr                           4.412e-01  7.898e-02   5.586 2.32e-08 ***
+devhx_18_p                    1.450e-02  5.362e-03   2.703 0.006862 ** 
+cbcl_scr_syn_attention_r     -8.935e-02  1.309e-02  -6.825 8.80e-12 ***
+reshist_addr1_coi_se_mhe      2.558e-06  4.571e-06   0.560 0.575689    
+demo_prnt_ed_v2               4.307e-02  2.577e-02   1.671 0.094640 .  
+reshist_addr1_coi_se_public  -4.316e-03  6.367e-03  -0.678 0.497886    
+reshist_addr1_seg_ice_income  1.184e-01  6.047e-01   0.196 0.844699    
+upps_y_ss_lack_of_planning    6.311e-02  1.701e-02   3.710 0.000207 ***
+reshist_addr1_coi_ed_apenr    6.217e-01  1.892e-01   3.286 0.001015 ** 
+reshist_addr1_coi_ed_schpov  -1.088e-03  2.405e-03  -0.452 0.651000    
+birth_weight                  1.443e-01  3.010e-02   4.795 1.63e-06 ***
+reshist_addr1_adi_perc        1.694e-03  2.655e-03   0.638 0.523403    
+upps_y_ss_positive_urgency   -5.289e-02  1.418e-02  -3.731 0.000191 ***
+reshist_addr1_coi_se_povrate  1.927e-03  7.198e-03   0.268 0.788957    
+asr_scr_anxdep_t              3.058e-02  6.408e-03   4.772 1.82e-06 ***
+reshist_addr1_coi_se_single   1.926e-03  3.664e-03   0.526 0.599148    
+reshist_addr1_coi_se_emprat   1.028e-02  5.963e-03   1.723 0.084819 .  
+physical_activity1_y          5.176e-02  1.780e-02   2.908 0.003633 ** 
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+(Dispersion parameter for binomial family taken to be 1)
+
+    Null deviance: 3888.7  on 3372  degrees of freedom
+Residual deviance: 3454.1  on 3352  degrees of freedom
+AIC: 3496.1
+
+Number of Fisher Scoring iterations: 4
+
+> 
+> pred <- predict(glm_cvxgboost, newdata=d_flpov, type="response")
+> roc_test <- roc(labels, pred, algorithm = 2) 
+Setting levels: control = 0, case = 1
+Setting direction: controls < cases
+> roc_test$auc
+Area under the curve: 0.7288
+> 
+> 
+> #------------------#
+> #-- SUPERLEARNER --#
+> ######################################################################################
+> # glmnet
+> ######################################################################################
+> # Create glmnet wrappers for different alphas (0=ridge, 5=elastic, 1=lasso).
+> # The default value for alpha in SL.glmnet is 1
+> #
+> # Ridge will not be fed all variables, so we need to create a separate learner for it.
+> ######################################################################################
+> tune.glmnet <- list(alpha = seq(0.1, 0.9, by = 0.2))
+> learners.glmnet <- create.Learner("SL.glmnet", tune = tune.glmnet, detailed_names = T, name_prefix = "SL.glmnet")
+> learners.glmnet0 <- create.Learner("SL.glmnet", tune = list(alpha = 0), detailed_names = T, name_prefix = "SL.glmnet")
+> learners.glmnet1 <- create.Learner("SL.glmnet", tune = list(alpha = 1), detailed_names = T, name_prefix = "SL.glmnet")
+> 
+> 
+> ###################
+> # ranger
+> ###################
+> # Set max.depth to 8, mtry to 9
+> ###################
+> learners.ranger_3 <- create.Learner("SL.ranger", params = list(max.depth = 3, num.trees = 1000), detailed_names = T, name_prefix = "SL.ranger_3")
+> learners.ranger_4 <- create.Learner("SL.ranger", params = list(max.depth = 4, num.trees = 1000),  detailed_names = T, name_prefix = "SL.ranger_4")
+> 
+> #########
+> # xgboost
+> #########
+> tune.xgb.1 <- list(ntrees = 200,
++                    max_depth = 4,
++                    shrinkage = 0.05,
++                    minobspernode = 5)
+> learners.xgb.1 <- create.Learner("SL.xgboost", tune = tune.xgb.1, detailed_names = T, name_prefix = "SL.xgboost")
+> 
+> tune.xgb.2 <- list(ntrees = 400,
++                    max_depth = 4,
++                    shrinkage = 0.025,
++                    minobspernode = 5)
+> learners.xgb.2 <- create.Learner("SL.xgboost", tune = tune.xgb.2, detailed_names = T, name_prefix = "SL.xgboost")
+> 
+> tune.xgb.3 <- list(ntrees = 1000,
++                    max_depth = 4,
++                    shrinkage = 0.01,
++                    minobspernode = 5)
+> learners.xgb.3 <- create.Learner("SL.xgboost", tune = tune.xgb.3, detailed_names = T, name_prefix = "SL.xgboost")
+> 
+> 
+> ##################################################
+> # Define SL libraries and run sg
+> ##################################################
+> 
+> SL.library = c(list(c('SL.glm','screen.corP'),
++                     c("SL.glmnet_0",'screen.corP'), c("SL.glmnet_1"), c("SL.glmnet_0.1",'screen.corP'), c("SL.glmnet_0.3",'screen.corP'), 
++                     c("SL.glmnet_0.5",'screen.corP'), c("SL.glmnet_0.7",'screen.corP'), c("SL.glmnet_0.9",'screen.corP'), 
++                     c("SL.ranger_3_1"), c("SL.ranger_4_1"), c(learners.xgb.1$names), 
++                     learners.xgb.2$names, 
++                     learners.xgb.3$names,
++                     c("SL.polymars",'screen.corP')))
+> 
+> SL.library
+[[1]]
+[1] "SL.glm"      "screen.corP"
+
+[[2]]
+[1] "SL.glmnet_0" "screen.corP"
+
+[[3]]
+[1] "SL.glmnet_1"
+
+[[4]]
+[1] "SL.glmnet_0.1" "screen.corP"  
+
+[[5]]
+[1] "SL.glmnet_0.3" "screen.corP"  
+
+[[6]]
+[1] "SL.glmnet_0.5" "screen.corP"  
+
+[[7]]
+[1] "SL.glmnet_0.7" "screen.corP"  
+
+[[8]]
+[1] "SL.glmnet_0.9" "screen.corP"  
+
+[[9]]
+[1] "SL.ranger_3_1"
+
+[[10]]
+[1] "SL.ranger_4_1"
+
+[[11]]
+[1] "SL.xgboost_200_4_0.05_5"
+
+[[12]]
+[1] "SL.xgboost_400_4_0.025_5"
+
+[[13]]
+[1] "SL.xgboost_1000_4_0.01_5"
+
+[[14]]
+[1] "SL.polymars" "screen.corP"
+
+> 
+> 
+> 
+> #-----------------------------------------#
+> #-- SuperLearner in complete cases data --#
+> 
+> 
+> d_pov_highcrcog <- dat_all_inr_complete %>% filter(pov3_highcrcog==1) %>% 
++   mutate(profile="pov3_highcrcog",
++          resilience=1)
+> d_pov_lowcrcog <- dat_all_inr_complete %>% filter(pov3_lowcrcog==1) %>% 
++   mutate(profile="pov3_lowcrcog",
++          resilience=0)
+> 
+> d_flpov <- rbind(d_pov_highcrcog,d_pov_lowcrcog)
+> 
+> SL.library = c(list(c('SL.glm','screen.corP'),
++                     c("SL.glmnet_0",'screen.corP'), c("SL.glmnet_1"), c("SL.glmnet_0.1",'screen.corP'), c("SL.glmnet_0.3",'screen.corP'), 
++                     c("SL.glmnet_0.5",'screen.corP'), c("SL.glmnet_0.7",'screen.corP'), c("SL.glmnet_0.9",'screen.corP'), 
++                     c("SL.ranger_3_1"), c("SL.ranger_4_1"), c(learners.xgb.1$names), 
++                     learners.xgb.2$names, 
++                     learners.xgb.3$names,
++                     c("SL.polymars",'screen.corP')))
+> 
+> SL.library
+[[1]]
+[1] "SL.glm"      "screen.corP"
+
+[[2]]
+[1] "SL.glmnet_0" "screen.corP"
+
+[[3]]
+[1] "SL.glmnet_1"
+
+[[4]]
+[1] "SL.glmnet_0.1" "screen.corP"  
+
+[[5]]
+[1] "SL.glmnet_0.3" "screen.corP"  
+
+[[6]]
+[1] "SL.glmnet_0.5" "screen.corP"  
+
+[[7]]
+[1] "SL.glmnet_0.7" "screen.corP"  
+
+[[8]]
+[1] "SL.glmnet_0.9" "screen.corP"  
+
+[[9]]
+[1] "SL.ranger_3_1"
+
+[[10]]
+[1] "SL.ranger_4_1"
+
+[[11]]
+[1] "SL.xgboost_200_4_0.05_5"
+
+[[12]]
+[1] "SL.xgboost_400_4_0.025_5"
+
+[[13]]
+[1] "SL.xgboost_1000_4_0.01_5"
+
+[[14]]
+[1] "SL.polymars" "screen.corP"
+
+> 
+> set.seed(123)
+> #-- Cross-validated SL
+> options(mc.cores = 4)
+> getOption("mc.cores")
+[1] 4
+> 
+> labels <- d_flpov$resilience
+> 
+> X <- d_flpov[,c(2,28:190)]
+> 
+> set.seed(123)
+> sl_fit <- CV.SuperLearner(Y = labels, X = X, family = binomial(),
++                           parallel = "multicore",
++                           id = d_flpov$rel_family_id,
++                           SL.library = SL.library)
+Loading required namespace: polspline
+Loading required namespace: polspline
+Loading required namespace: polspline
+Loading required namespace: polspline
+Loading required namespace: ranger
+Loading required namespace: ranger
+Loading required namespace: ranger
+Loading required namespace: ranger
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+step half ouch...
+warning - model size was reduced
+step half ouch...
+warning - model size was reduced
+> sl_fit$coef
+      SL.glm_screen.corP SL.glmnet_0_screen.corP SL.glmnet_1_All
+ [1,]         0.00000000               0.4409720       0.0000000
+ [2,]         0.00000000               0.0000000       0.0000000
+ [3,]         0.00000000               0.5130184       0.0000000
+ [4,]         0.00000000               0.4972326       0.1175491
+ [5,]         0.00000000               0.2868323       0.3095473
+ [6,]         0.00000000               0.1841165       0.5282370
+ [7,]         0.00000000               0.2224860       0.4255381
+ [8,]         0.00000000               0.5890595       0.0000000
+ [9,]         0.00000000               0.7219939       0.0000000
+[10,]         0.07435893               0.3046884       0.0000000
+      SL.glmnet_0.1_screen.corP SL.glmnet_0.3_screen.corP
+ [1,]                 0.0000000                 0.0000000
+ [2,]                 0.6355084                 0.0000000
+ [3,]                 0.0000000                 0.0000000
+ [4,]                 0.0000000                 0.0000000
+ [5,]                 0.0000000                 0.0000000
+ [6,]                 0.0000000                 0.0000000
+ [7,]                 0.0000000                 0.0259605
+ [8,]                 0.0000000                 0.0000000
+ [9,]                 0.0000000                 0.0000000
+[10,]                 0.0000000                 0.0000000
+      SL.glmnet_0.5_screen.corP SL.glmnet_0.7_screen.corP
+ [1,]                         0                 0.0000000
+ [2,]                         0                 0.0000000
+ [3,]                         0                 0.1035979
+ [4,]                         0                 0.0000000
+ [5,]                         0                 0.0000000
+ [6,]                         0                 0.0000000
+ [7,]                         0                 0.0000000
+ [8,]                         0                 0.0000000
+ [9,]                         0                 0.0000000
+[10,]                         0                 0.0000000
+      SL.glmnet_0.9_screen.corP SL.ranger_3_1_All SL.ranger_4_1_All
+ [1,]                         0        0.04579027        0.00000000
+ [2,]                         0        0.00000000        0.01829114
+ [3,]                         0        0.00000000        0.11327252
+ [4,]                         0        0.00000000        0.00000000
+ [5,]                         0        0.00000000        0.00000000
+ [6,]                         0        0.00000000        0.01474890
+ [7,]                         0        0.00000000        0.00000000
+ [8,]                         0        0.00000000        0.00000000
+ [9,]                         0        0.00000000        0.00000000
+[10,]                         0        0.05296166        0.00000000
+      SL.xgboost_200_4_0.05_5_All SL.xgboost_400_4_0.025_5_All
+ [1,]                  0.23857330                    0.1270234
+ [2,]                  0.00000000                    0.1480515
+ [3,]                  0.27011114                    0.0000000
+ [4,]                  0.04610919                    0.0000000
+ [5,]                  0.00000000                    0.4036204
+ [6,]                  0.18727030                    0.0000000
+ [7,]                  0.11688736                    0.0000000
+ [8,]                  0.00000000                    0.0000000
+ [9,]                  0.00000000                    0.0000000
+[10,]                  0.02241062                    0.0000000
+      SL.xgboost_1000_4_0.01_5_All SL.polymars_screen.corP
+ [1,]                   0.00000000            0.1476410795
+ [2,]                   0.19742719            0.0007217914
+ [3,]                   0.00000000            0.0000000000
+ [4,]                   0.25200169            0.0871073924
+ [5,]                   0.00000000            0.0000000000
+ [6,]                   0.06626818            0.0193590767
+ [7,]                   0.20912803            0.0000000000
+ [8,]                   0.41094047            0.0000000000
+ [9,]                   0.26627889            0.0117271911
+[10,]                   0.25416066            0.2914197285
+> 
+> pred = sl_fit$SL.predict
+> pred_rocr = ROCR::prediction(pred, labels)
+> auc = ROCR::performance(pred_rocr, measure = "auc", x.measure = "cutoff")@y.values[[1]]
+> auc
+[1] 0.7116141
+> 
+> 
+> new_ts <- as.matrix(X)
+> dim(new_ts)
+[1] 1365  164
+> length(pred)
+[1] 1365
+> 
+> xgb_util <- xgboost(data = new_ts, label = pred, nrounds = 200, verbose=FALSE,params=params)
+> importance_matrix <- xgb.importance(model = xgb_util)
+> importance_matrix
+                           Feature         Gain        Cover   Frequency
+ 1:               demo_prtnr_ed_v2 0.2169426565 7.763016e-02 0.064013841
+ 2:   reshist_addr1_seg_ice_inc_bw 0.1610394809 2.816419e-02 0.020761246
+ 3:                            inr 0.1410513668 5.179164e-02 0.043252595
+ 4: reshist_addr1_svi_tot_20142018 0.0764774569 2.259432e-02 0.020761246
+ 5:    reshist_addr1_coi_se_public 0.0412885247 7.560491e-03 0.006920415
+ 6:       cbcl_scr_syn_attention_r 0.0397430809 4.762523e-02 0.044982699
+ 7:               asr_scr_anxdep_t 0.0274780184 3.270348e-02 0.039792388
+ 8:                   birth_weight 0.0234278756 3.428749e-02 0.036332180
+ 9:          sai_p_activities___24 0.0165672697 3.561589e-02 0.029411765
+10:                     devhx_18_p 0.0165524547 1.788917e-02 0.020761246
+11:            demo_mar_livingwith 0.0160835197 1.587957e-02 0.013840830
+12:          cbcl_scr_syn_social_r 0.0137307786 3.465007e-02 0.032871972
+13:                demo_prnt_ed_v2 0.0133368636 7.281210e-03 0.008650519
+14:       famhx_ss_moth_prob_prf_p 0.0120918613 2.282789e-02 0.019031142
+15:      reshist_addr1_coi_he_rsei 0.0110940288 2.370815e-02 0.022491349
+16:                   sds_p_ss_sbd 0.0101725514 2.869683e-02 0.020761246
+17:                 pubertal_sex_p 0.0099369114 3.216279e-02 0.025951557
+18:    reshist_addr1_coi_ed_schpov 0.0086140558 2.428960e-03 0.005190311
+19:    reshist_addr1_coi_se_emprat 0.0085282055 9.239152e-03 0.010380623
+20:       cbcl_scr_syn_rulebreak_r 0.0084956581 9.402814e-03 0.017301038
+21:     reshist_addr1_coi_ed_apenr 0.0082739155 2.273044e-02 0.025951557
+22:    reshist_addr1_coi_se_single 0.0071933606 4.147541e-03 0.003460208
+23:     upps_y_ss_lack_of_planning 0.0069481461 2.629066e-02 0.024221453
+24:                sai_p_perf_arts 0.0066778478 1.564076e-02 0.017301038
+25:   reshist_addr1_coi_ed_teachxp 0.0066621069 2.870948e-02 0.027681661
+26:      reshist_addr1_coi_ed_math 0.0065609479 5.299490e-03 0.005190311
+27:            asr_scr_attention_t 0.0058737866 9.035805e-03 0.013840830
+28:   reshist_addr1_coi_se_jobprox 0.0057038314 1.041803e-02 0.010380623
+29:              asr_scr_somatic_t 0.0049753659 2.122749e-02 0.025951557
+30:           physical_activity1_y 0.0047597740 2.165123e-02 0.017301038
+31:              num_close_friends 0.0045418507 1.948749e-02 0.015570934
+32:                  interview_age 0.0040820693 2.483830e-02 0.022491349
+33:            parent_su_comm_risk 0.0037279755 2.030793e-02 0.017301038
+34:           physical_activity5_y 0.0034646111 1.899234e-02 0.019031142
+35:    reshist_state_sexism_factor 0.0034263642 5.903460e-03 0.005190311
+36:      reshist_addr1_coi_he_pm25 0.0029872029 1.146250e-02 0.019031142
+37:                  pmq_y_ss_mean 0.0028832394 2.180350e-02 0.017301038
+38:                       devhx_10 0.0027222371 1.625393e-02 0.013840830
+39:    reshist_state_racism_factor 0.0025173171 1.206224e-02 0.010380623
+40:     upps_y_ss_negative_urgency 0.0021724635 1.039099e-02 0.012110727
+41:           ksads_ptsd_raw_767_p 0.0021619863 1.313538e-02 0.012110727
+42:                  peer_deviance 0.0019168905 9.231497e-03 0.006920415
+43:            screentime1_p_hours 0.0018319458 1.193734e-02 0.012110727
+44:   reshist_addr1_coi_ed_college 0.0016817287 4.289589e-04 0.003460208
+45:   reshist_addr1_seg_ice_income 0.0016433607 9.013740e-03 0.006920415
+46:      reshist_addr1_coi_se_home 0.0015877439 5.088052e-03 0.005190311
+47:               demo_fam_exp2_v2 0.0015258221 9.608274e-03 0.008650519
+48:    reshist_addr1_seg_entropy_t 0.0015246242 5.254068e-03 0.010380623
+49:       famhx_ss_fath_prob_prf_p 0.0014061519 6.933492e-03 0.005190311
+50:   reshist_addr1_coi_he_suprfnd 0.0013971091 9.607502e-03 0.008650519
+51:        reshist_state_so_factor 0.0013051838 8.106300e-04 0.005190311
+52:      cbcl_scr_syn_aggressive_r 0.0012044562 4.270443e-03 0.005190311
+53:     upps_y_ss_positive_urgency 0.0009922557 3.043969e-03 0.008650519
+54:    upps_y_ss_sensation_seeking 0.0009264185 8.155149e-03 0.006920415
+55:      reshist_addr1_coi_he_walk 0.0008841287 1.974637e-03 0.005190311
+56:               bis_y_ss_bis_sum 0.0008650283 3.039939e-03 0.003460208
+57:       reshist_addr1_urbsat_ntl 0.0008517014 2.010871e-03 0.005190311
+58:                   pds_p_ss_cat 0.0007028286 9.839259e-04 0.001730104
+59:       reshist_addr1_coi_se_mhe 0.0006855830 1.067660e-03 0.003460208
+60:     reshist_addr1_coi_he_ozone 0.0006739065 9.277721e-04 0.005190311
+61:   reshist_addr1_coi_ed_reading 0.0006319834 1.741369e-03 0.003460208
+62:  reshist_addr1_seg_inter_nww_m 0.0006046154 3.148059e-04 0.001730104
+63:   reshist_addr1_seg_diss_nww_m 0.0004471769 4.123423e-03 0.003460208
+64:            asr_scr_withdrawn_t 0.0004464226 3.042915e-03 0.005190311
+65:   reshist_addr1_coi_he_vacancy 0.0004420799 1.897016e-03 0.003460208
+66:    reshist_addr1_coi_ed_hsgrad 0.0004363922 2.097467e-03 0.003460208
+67:                    fes_y_ss_fc 0.0003837191 6.646430e-04 0.003460208
+68:         cbcl_scr_syn_thought_r 0.0003190974 1.691951e-03 0.001730104
+69:     reshist_addr1_coi_he_green 0.0002472028 2.629048e-03 0.003460208
+70:           reshist_addr1_proxrd 0.0002131734 7.212964e-04 0.001730104
+71:       reshist_addr1_popdensity 0.0002102824 1.331537e-03 0.001730104
+72:                      asr_q90_p 0.0001950516 1.614123e-04 0.001730104
+73:           ksads_ptsd_raw_770_p 0.0001783074 6.908418e-04 0.001730104
+74:    reshist_addr1_coi_ed_prxece 0.0001772193 1.010911e-03 0.001730104
+75:            screentime2_p_hours 0.0001767416 4.648685e-05 0.001730104
+76:   reshist_addr1_coi_ed_ecenrol 0.0001588222 4.623696e-04 0.001730104
+77:   reshist_addr1_coi_se_povrate 0.0001558254 2.056140e-03 0.001730104
+                           Feature         Gain        Cover   Frequency
+> ## Create table comparing distributions of top 20 important variables by any_util
+> vars <- as.vector(unlist(importance_matrix[1:20,1]))
+> imp <- data.frame(importance_matrix)
+> names(imp) <- c("Variable","Gain","Cover","Frequency")
+> 
+> table_util_imp <- CreateTableOne(vars = vars,
++                                  strata = c("resilience"), 
++                                  includeNA = F, 
++                                  addOverall = F,
++                                  data = d_flpov)
+> table_util_imp <- data.frame(print(table_util_imp, explain=F, missing=T, catDigits = 2, contDigits = 2))
+                                Stratified by resilience
+                                 0             1             p      test
+  n                                973           392                    
+  demo_prtnr_ed_v2               13.02 (2.42)  14.33 (2.53)  <0.001     
+  reshist_addr1_seg_ice_inc_bw    0.02 (0.23)   0.14 (0.22)  <0.001     
+  inr                             1.00 (0.59)   1.28 (0.50)  <0.001     
+  reshist_addr1_svi_tot_20142018  0.64 (0.27)   0.51 (0.30)  <0.001     
+  reshist_addr1_coi_se_public    21.43 (14.33) 15.28 (12.23) <0.001     
+  cbcl_scr_syn_attention_r        3.47 (3.84)   2.60 (3.40)  <0.001     
+  asr_scr_anxdep_t               53.84 (6.47)  55.05 (6.98)   0.002     
+  birth_weight                    6.86 (1.46)   7.19 (1.38)  <0.001     
+  sai_p_activities___24           0.15 (0.36)   0.23 (0.42)  <0.001     
+  devhx_18_p                      5.47 (7.36)   7.55 (7.67)  <0.001     
+  demo_mar_livingwith             0.53 (0.50)   0.67 (0.47)  <0.001     
+  cbcl_scr_syn_social_r           2.04 (2.50)   1.48 (2.25)  <0.001     
+  demo_prnt_ed_v2                13.50 (2.09)  14.36 (1.99)  <0.001     
+  famhx_ss_moth_prob_prf_p        0.27 (0.44)   0.36 (0.48)   0.001     
+  reshist_addr1_coi_he_rsei       6.98 (2.72)   7.17 (2.60)   0.235     
+  sds_p_ss_sbd                    4.00 (1.46)   3.74 (1.04)   0.001     
+  pubertal_sex_p                  1.50 (0.50)   1.43 (0.50)   0.017     
+  reshist_addr1_coi_ed_schpov    67.86 (24.05) 57.41 (25.77) <0.001     
+  reshist_addr1_coi_se_emprat    74.07 (10.18) 77.75 (8.32)  <0.001     
+  cbcl_scr_syn_rulebreak_r        1.70 (2.42)   1.15 (1.75)  <0.001     
+                                Stratified by resilience
+                                 Missing
+  n                                     
+  demo_prtnr_ed_v2               0.0    
+  reshist_addr1_seg_ice_inc_bw   0.0    
+  inr                            0.0    
+  reshist_addr1_svi_tot_20142018 0.0    
+  reshist_addr1_coi_se_public    0.0    
+  cbcl_scr_syn_attention_r       0.0    
+  asr_scr_anxdep_t               0.0    
+  birth_weight                   0.0    
+  sai_p_activities___24          0.0    
+  devhx_18_p                     0.0    
+  demo_mar_livingwith            0.0    
+  cbcl_scr_syn_social_r          0.0    
+  demo_prnt_ed_v2                0.0    
+  famhx_ss_moth_prob_prf_p       0.0    
+  reshist_addr1_coi_he_rsei      0.0    
+  sds_p_ss_sbd                   0.0    
+  pubertal_sex_p                 0.0    
+  reshist_addr1_coi_ed_schpov    0.0    
+  reshist_addr1_coi_se_emprat    0.0    
+  cbcl_scr_syn_rulebreak_r       0.0    
+> table_util_imp <- tibble::rownames_to_column(table_util_imp, "Characteristic")[,c(1:5)]
+> table_util_imp
+                   Characteristic            X0            X1      p test
+1                               n           973           392            
+2                demo_prtnr_ed_v2  13.02 (2.42)  14.33 (2.53) <0.001     
+3    reshist_addr1_seg_ice_inc_bw   0.02 (0.23)   0.14 (0.22) <0.001     
+4                             inr   1.00 (0.59)   1.28 (0.50) <0.001     
+5  reshist_addr1_svi_tot_20142018   0.64 (0.27)   0.51 (0.30) <0.001     
+6     reshist_addr1_coi_se_public 21.43 (14.33) 15.28 (12.23) <0.001     
+7        cbcl_scr_syn_attention_r   3.47 (3.84)   2.60 (3.40) <0.001     
+8                asr_scr_anxdep_t  53.84 (6.47)  55.05 (6.98)  0.002     
+9                    birth_weight   6.86 (1.46)   7.19 (1.38) <0.001     
+10          sai_p_activities___24   0.15 (0.36)   0.23 (0.42) <0.001     
+11                     devhx_18_p   5.47 (7.36)   7.55 (7.67) <0.001     
+12            demo_mar_livingwith   0.53 (0.50)   0.67 (0.47) <0.001     
+13          cbcl_scr_syn_social_r   2.04 (2.50)   1.48 (2.25) <0.001     
+14                demo_prnt_ed_v2  13.50 (2.09)  14.36 (1.99) <0.001     
+15       famhx_ss_moth_prob_prf_p   0.27 (0.44)   0.36 (0.48)  0.001     
+16      reshist_addr1_coi_he_rsei   6.98 (2.72)   7.17 (2.60)  0.235     
+17                   sds_p_ss_sbd   4.00 (1.46)   3.74 (1.04)  0.001     
+18                 pubertal_sex_p   1.50 (0.50)   1.43 (0.50)  0.017     
+19    reshist_addr1_coi_ed_schpov 67.86 (24.05) 57.41 (25.77) <0.001     
+20    reshist_addr1_coi_se_emprat 74.07 (10.18)  77.75 (8.32) <0.001     
+21       cbcl_scr_syn_rulebreak_r   1.70 (2.42)   1.15 (1.75) <0.001     
+> 
+> names(table_util_imp) <- c("Variable", "Poverty_Low_Cog", "Poverty_High_Cog","p_value","prop_missing")
+> 
+> table_util_imp_label <- merge(x=table_util_imp, y=dict, by="Variable",all.x=T) %>%
++   dplyr::select(Label,Variable,Poverty_Low_Cog,Poverty_High_Cog,p_value,prop_missing,Order,Order2)
+> 
+> table_util_imp_label_gain <- merge(x=table_util_imp_label, y=imp, all.x=T, by="Variable")
+> table_util_imp_label_gain
+                         Variable
+1                asr_scr_anxdep_t
+2                    birth_weight
+3        cbcl_scr_syn_attention_r
+4        cbcl_scr_syn_rulebreak_r
+5           cbcl_scr_syn_social_r
+6             demo_mar_livingwith
+7                 demo_prnt_ed_v2
+8                demo_prtnr_ed_v2
+9                      devhx_18_p
+10       famhx_ss_moth_prob_prf_p
+11                            inr
+12                              n
+13                 pubertal_sex_p
+14    reshist_addr1_coi_ed_schpov
+15      reshist_addr1_coi_he_rsei
+16    reshist_addr1_coi_se_emprat
+17    reshist_addr1_coi_se_public
+18   reshist_addr1_seg_ice_inc_bw
+19 reshist_addr1_svi_tot_20142018
+20          sai_p_activities___24
+21                   sds_p_ss_sbd
+                                                                                                                                                                                                                                                                                                                                Label
+1                                                                                                                                                                                                                                              Parental psychopathology - adult self-report (parent) ASEBA: Anxious/depressed t-score
+2                                                                                                                                                                                                                                                                                 Developmental history quesitonnaire: birth weight: 
+3                                                                                                                                                                                                                              Child dimensional psychopathology - CBCL -  parent-reported: Attention CBCL Syndrome Scale (raw score)
+4                                                                                                                                                                                                                              Child dimensional psychopathology - CBCL -  parent-reported: RuleBreak CBCL Syndrome Scale (raw score)
+5                                                                                                                                                                                                                                 Child dimensional psychopathology - CBCL -  parent-reported: Social CBCL Syndrome Scale (raw score)
+6                                                                                                                                                                                                                                                                                             Parent married or living with a partner
+7                                                                                                                                                                                                    Parental ed - primary: What is the highest grade or level of school you have completed or the highest degree you have received? 
+8                                                                                                                                                          Parental ed - secondary: What is the highest grade or level of school your partner completed or highest degree they received? (imputed with parent's education if missing)
+9                                                                                                                                                                                                                                                                  Developmental history questionnaire: nuumber of months breastfed: 
+10                                                                                                                                                                                                     Adversity - Mental illness in household - Family history: mother been to a doctor or counselor due to emotional/mental problem
+11                                                                                                                                                                                                                                                                                                                                INR
+12                                                                                                                                                                                                                                                                                                                                  n
+13                                                                                                                                                                                                                                                                                                                     Biological sex
+14                                                                                                                                                                                                                        Neightbohood quality: Child opportunity index (COI) 2.0 - primary address: Education Domain: School poverty
+15                                                                                                                                                                              Neightbohood quality: Child opportunity index (COI) 2.0 - primary address: Health and Environment Domain: Industrial pollutants in air, water or soil
+16                                                                                                                                                                                                             Neightbohood quality: Child opportunity index (COI) 2.0 - primary address: Social and Economic Domain: Employment rate
+17                                                                                                                                                                                                      Neightbohood quality: Child opportunity index (COI) 2.0 - primary address: Social and Economic Domain: Public assistance rate
+18             Neighborhood: residential segregation - Index of Concentrations at the Extremes: Residential history derived- Index of Concentration at the Extremes(Income+ BW), (non-Hispanic white Households income >= $100k) - (non-Hispanic Black Households income < $25k)/total population, ACS2014-2018; census tract (addr1)
+19 Neighborhood quality: Social Vulnerability Index (SVI) - overall: Residential history derived - Census tract CDC Social Vulnerability Index (SVI) (overall percentile) at primary residential address (ACS 2014-2018 5 yr avg) - based on 15 census variables indicating area\xd5s potential need for support following a disaster
+20                                                                                                                                                                                                                                                                       Physical activity / hobbies: Ever arts (non-performing) (24)
+21                                                                                                                                                                                                                                                                                             Sleep: Sleep Breathing disorders (SBD)
+   Poverty_Low_Cog Poverty_High_Cog p_value prop_missing Order Order2
+1     53.84 (6.47)     55.05 (6.98)   0.002                  3   39.0
+2      6.86 (1.46)      7.19 (1.38)  <0.001                  2    2.0
+3      3.47 (3.84)      2.60 (3.40)  <0.001                  3   52.0
+4      1.70 (2.42)      1.15 (1.75)  <0.001                  3   53.0
+5      2.04 (2.50)      1.48 (2.25)  <0.001                  3   50.0
+6      0.53 (0.50)      0.67 (0.47)  <0.001                  1    3.0
+7     13.50 (2.09)     14.36 (1.99)  <0.001                  1    1.0
+8     13.02 (2.42)     14.33 (2.53)  <0.001                  1    2.0
+9      5.47 (7.36)      7.55 (7.67)  <0.001                  2   16.0
+10     0.27 (0.44)      0.36 (0.48)   0.001                  3   31.0
+11     1.00 (0.59)      1.28 (0.50)  <0.001                  0    1.0
+12             973              392                          0    0.0
+13     1.50 (0.50)      1.43 (0.50)   0.017                  2    1.1
+14   67.86 (24.05)    57.41 (25.77)  <0.001                  7   12.0
+15     6.98 (2.72)      7.17 (2.60)   0.235                  7   23.0
+16   74.07 (10.18)     77.75 (8.32)  <0.001                  7   27.0
+17   21.43 (14.33)    15.28 (12.23)  <0.001                  7   32.0
+18     0.02 (0.23)      0.14 (0.22)  <0.001                  7   52.0
+19     0.64 (0.27)      0.51 (0.30)  <0.001                  7   40.0
+20     0.15 (0.36)      0.23 (0.42)  <0.001                  2   24.0
+21     4.00 (1.46)      3.74 (1.04)   0.001                  2   32.0
+          Gain       Cover   Frequency
+1  0.027478018 0.032703478 0.039792388
+2  0.023427876 0.034287487 0.036332180
+3  0.039743081 0.047625227 0.044982699
+4  0.008495658 0.009402814 0.017301038
+5  0.013730779 0.034650074 0.032871972
+6  0.016083520 0.015879569 0.013840830
+7  0.013336864 0.007281210 0.008650519
+8  0.216942657 0.077630160 0.064013841
+9  0.016552455 0.017889172 0.020761246
+10 0.012091861 0.022827887 0.019031142
+11 0.141051367 0.051791638 0.043252595
+12          NA          NA          NA
+13 0.009936911 0.032162789 0.025951557
+14 0.008614056 0.002428960 0.005190311
+15 0.011094029 0.023708153 0.022491349
+16 0.008528205 0.009239152 0.010380623
+17 0.041288525 0.007560491 0.006920415
+18 0.161039481 0.028164189 0.020761246
+19 0.076477457 0.022594320 0.020761246
+20 0.016567270 0.035615887 0.029411765
+21 0.010172551 0.028696828 0.020761246
+> 
+> write.csv(table_util_imp_label_gain,"/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/results/INR_tert_cryst_cvSL_comp_table_util_imp_label_gain_upd.csv")
+> 
+> #-- Run a logistic regression with the top 20 important predictors selected by xgboost
+> glm_cvxgboost = glm(data=d_flpov, formula(paste("resilience ~ ",paste(table_util_imp$Variable[2:21], collapse ="+"), collapse = " ")), family="binomial")
+> 
+> summary(glm_cvxgboost)
+
+Call:
+glm(formula = formula(paste("resilience ~ ", paste(table_util_imp$Variable[2:21], 
+    collapse = "+"), collapse = " ")), family = "binomial", data = d_flpov)
+
+Deviance Residuals: 
+    Min       1Q   Median       3Q      Max  
+-1.7395  -0.7878  -0.5368   0.9517   2.6998  
+
+Coefficients:
+                                 Estimate Std. Error z value Pr(>|z|)    
+(Intercept)                    -7.6637514  1.3677596  -5.603 2.11e-08 ***
+demo_prtnr_ed_v2                0.1225999  0.0342496   3.580 0.000344 ***
+reshist_addr1_seg_ice_inc_bw    0.7868430  0.6131574   1.283 0.199399    
+inr                             0.4698344  0.1305842   3.598 0.000321 ***
+reshist_addr1_svi_tot_20142018 -0.2455922  0.4301925  -0.571 0.568075    
+reshist_addr1_coi_se_public    -0.0004858  0.0094015  -0.052 0.958786    
+cbcl_scr_syn_attention_r       -0.0638563  0.0254679  -2.507 0.012165 *  
+asr_scr_anxdep_t                0.0449047  0.0113753   3.948 7.90e-05 ***
+birth_weight                    0.1269084  0.0461821   2.748 0.005996 ** 
+sai_p_activities___24           0.5372560  0.1652463   3.251 0.001149 ** 
+devhx_18_p                      0.0094098  0.0088563   1.062 0.288009    
+demo_mar_livingwith             0.2998539  0.1439889   2.082 0.037299 *  
+cbcl_scr_syn_social_r          -0.0649693  0.0412017  -1.577 0.114827    
+demo_prnt_ed_v2                 0.0312561  0.0400248   0.781 0.434850    
+famhx_ss_moth_prob_prf_p        0.3486539  0.1534699   2.272 0.023098 *  
+reshist_addr1_coi_he_rsei       0.0496147  0.0253336   1.958 0.050177 .  
+sds_p_ss_sbd                   -0.0711062  0.0568950  -1.250 0.211381    
+pubertal_sex_p                 -0.4146414  0.1369979  -3.027 0.002473 ** 
+reshist_addr1_coi_ed_schpov     0.0037719  0.0041763   0.903 0.366436    
+reshist_addr1_coi_se_emprat     0.0140321  0.0104471   1.343 0.179220    
+cbcl_scr_syn_rulebreak_r       -0.0406703  0.0435148  -0.935 0.349978    
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+(Dispersion parameter for binomial family taken to be 1)
+
+    Null deviance: 1636.9  on 1364  degrees of freedom
+Residual deviance: 1414.0  on 1344  degrees of freedom
+AIC: 1456
+
+Number of Fisher Scoring iterations: 4
+
+> 
+> pred <- predict(glm_cvxgboost, newdata=d_flpov, type="response")
+> roc_test <- roc(labels, pred, algorithm = 2) 
+Setting levels: control = 0, case = 1
+Setting direction: controls < cases
+> roc_test$auc
+Area under the curve: 0.7486
+> 
+> 
+> # #-------------------------------------#
+> # #-- SuperLearner in 1x imputed data --#
+> # 
+> # d <- complete(d_imp)
+> # 
+> # d_pov_highcrcog <- d %>% filter(pov3_highcrcog==1) %>% 
+> #   mutate(profile="pov3_highcrcog",
+> #          resilience=1)
+> # d_pov_lowcrcog <- d %>% filter(pov3_lowcrcog==1) %>% 
+> #   mutate(profile="pov3_lowcrcog",
+> #          resilience=0)
+> # 
+> # d_flpov <- rbind(d_pov_highcrcog,d_pov_lowcrcog)
+> # 
+> # set.seed(123)
+> # #-- Cross-validated SL
+> # options(mc.cores = 4)
+> # getOption("mc.cores")
+> # 
+> # labels <- d_flpov$resilience
+> # 
+> # X <- d_flpov[,c(5,31:199)]
+> # 
+> # set.seed(123)
+> # sl_fit <- CV.SuperLearner(Y = labels, X = X, family = binomial(),
+> #                           parallel = "multicore",
+> #                           id = d_flpov$rel_family_id,
+> #                           SL.library = SL.library)
+> # sl_fit$coef
+> # 
+> # pred = sl_fit$SL.predict
+> # pred_rocr = ROCR::prediction(pred, labels)
+> # auc = ROCR::performance(pred_rocr, measure = "auc", x.measure = "cutoff")@y.values[[1]]
+> # auc
+> # 
+> # 
+> # new_ts <- as.matrix(X)
+> # dim(new_ts)
+> # length(pred)
+> # 
+> # xgb_util <- xgboost(data = new_ts, label = pred, nrounds = 200, verbose=FALSE,params=params)
+> # importance_matrix <- xgb.importance(model = xgb_util)
+> # importance_matrix
+> # ## Create table comparing distributions of top 20 important variables by any_util
+> # vars <- as.vector(unlist(importance_matrix[1:20,1]))
+> # imp <- data.frame(importance_matrix)
+> # names(imp) <- c("Variable","Gain","Cover","Frequency")
+> # 
+> # table_util_imp <- CreateTableOne(vars = vars,
+> #                                  strata = c("resilience"), 
+> #                                  includeNA = F, 
+> #                                  addOverall = F,
+> #                                  data = d_flpov)
+> # table_util_imp <- data.frame(print(table_util_imp, explain=F, missing=T, catDigits = 2, contDigits = 2))
+> # table_util_imp <- tibble::rownames_to_column(table_util_imp, "Characteristic")[,c(1:5)]
+> # table_util_imp
+> # 
+> # names(table_util_imp) <- c("Variable", "Poverty_Low_Cog", "Poverty_High_Cog","p_value","prop_missing")
+> # 
+> # table_util_imp_label <- merge(x=table_util_imp, y=dict, by="Variable",all.x=T) %>%
+> #   dplyr::select(Label,Variable,Poverty_Low_Cog,Poverty_High_Cog,p_value,prop_missing,Order,Order2)
+> # 
+> # table_util_imp_label_gain <- merge(x=table_util_imp_label, y=imp, all.x=T, by="Variable")
+> # table_util_imp_label_gain
+> # 
+> # write.csv(table_util_imp_label_gain,"/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/results/INR_tert_cryst_cvSL_imputed1x_table_util_imp_label_gain_upd.csv")
+> # 
+> # #-- Run a logistic regression with the top 20 important predictors selected by xgboost
+> # glm_cvxgboost = glm(data=d_flpov, formula(paste("resilience ~ ",paste(table_util_imp$Variable[2:21], collapse ="+"), collapse = " ")), family="binomial")
+> # 
+> # summary(glm_cvxgboost)
+> # 
+> # pred <- predict(glm_cvxgboost, newdata=d_flpov, type="response")
+> # roc_test <- roc(labels, pred, algorithm = 2) 
+> # roc_test$auc
+> 
+> 
+> #-----------#
+> #-- LASSO --#
+> 
+> 
+> #---------------------------------------#
+> #-- cross-validated in complete cases --#
+> 
+> d_pov_highcrcog <- dat_all_inr_complete %>% filter(pov3_highcrcog==1) %>% 
++   mutate(profile="pov3_highcrcog",
++          resilience=1)
+> d_pov_lowcrcog <- dat_all_inr_complete %>% filter(pov3_lowcrcog==1) %>% 
++   mutate(profile="pov3_lowcrcog",
++          resilience=0)
+> 
+> d_flpov <- rbind(d_pov_highcrcog,d_pov_lowcrcog)
+> 
+> 
+> # Prepare data set 
+> x <- as.matrix(d_flpov[,c(2,28:190)])
+> y <- factor(d_flpov$resilience)
+> 
+> 
+> # Run cross-validation
+> set.seed(123)
+> mod_cv <- cv.glmnet(x=x, y=y, family='binomial')
+> 
+> mod_cv$lambda.1se
+[1] 0.03169639
+> 
+> coefs <- tibble::rownames_to_column(data.frame(as.matrix(coef(mod_cv, mod_cv$lambda.1se))), "name") %>%
++   filter(s1 != 0 & name != "(Intercept)")
+> coefs
+                             name           s1
+1                             inr  0.318089231
+2  reshist_addr1_svi_tot_20142018 -0.129733492
+3    reshist_addr1_seg_ice_inc_bw  0.762057303
+4             demo_mar_livingwith  0.080287440
+5                 demo_prnt_ed_v2  0.001321526
+6                demo_prtnr_ed_v2  0.097080238
+7        famhx_ss_moth_prob_prf_p  0.018144990
+8                asr_scr_anxdep_t  0.005452764
+9                    birth_weight  0.031610960
+10          sai_p_activities___24  0.055599276
+11                sai_p_perf_arts  0.012262030
+12          cbcl_scr_syn_social_r -0.001012427
+13       cbcl_scr_syn_attention_r -0.017824431
+> 
+> lasso_pred <- predict(mod_cv,s=mod_cv$lambda.1se,newx=x,type="response")
+> summary(lasso_pred)
+       s1         
+ Min.   :0.09845  
+ 1st Qu.:0.21095  
+ Median :0.27663  
+ Mean   :0.28718  
+ 3rd Qu.:0.34411  
+ Max.   :0.64819  
+> hist(lasso_pred)
+> roc_test <- roc(y, lasso_pred, algorithm = 2) 
+Setting levels: control = 0, case = 1
+Setting direction: controls < cases
+Warning message:
+In roc.default(y, lasso_pred, algorithm = 2) :
+  Deprecated use a matrix as predictor. Unexpected results may be produced, please pass a numeric vector.
+> roc_test$auc
+Area under the curve: 0.7142
+> 
+> glm_cvxgboost = glm(data=d_flpov, formula(paste("resilience ~ ",paste(coefs$name, collapse ="+"), collapse = " ")), family="binomial")
+> 
+> obj<-summary(glm_cvxgboost)$coefficients
+> write.csv(obj,"/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/results/INR_tert_cryst_cvLASSO_comp_coef_upd.csv")
+> 
+> 
+> pred <- predict(glm_cvxgboost, newdata=d_flpov, type="response")
+> roc_test <- roc(y, pred, algorithm = 2) 
+Setting levels: control = 0, case = 1
+Setting direction: controls < cases
+> roc_test$auc
+Area under the curve: 0.7383
+> 
+> 
+> 
+> #----------------------------------------#
+> #-- cross-validated in 1x imputed data --#
+> 
+> d <- complete(d_imp)
+> 
+> d_pov_highflcog <- d %>% filter(pov3_highcrcog==1) %>% 
++   mutate(profile="pov3_highcrcog",
++          resilience=1)
+> d_pov_lowflcog <- d %>% filter(pov3_lowcrcog==1) %>% 
++   mutate(profile="pov3_lowcrcog",
++          resilience=0)
+> 
+> d_flpov <- rbind(d_pov_highflcog,d_pov_lowflcog)
+> 
+> 
+> # Prepare data set 
+> x <- as.matrix(d_flpov[,c(2,28:190)])
+> y <- factor(d_flpov$resilience)
+> 
+> 
+> # Run cross-validation
+> set.seed(123)
+> mod_cv <- cv.glmnet(x=x, y=y, family='binomial')
+> 
+> mod_cv$lambda.1se
+[1] 0.01414153
+> 
+> 
+> coefs <- tibble::rownames_to_column(data.frame(as.matrix(coef(mod_cv, mod_cv$lambda.1se))), "name") %>%
++   filter(s1 != 0 & name != "(Intercept)")
+> coefs
+                             name            s1
+1                             inr  0.3243362954
+2                   interview_age  0.0041704168
+3                   srpf_y_ss_ses -0.0134073897
+4                     fes_y_ss_fc -0.0173276847
+5                   psb_y_ss_mean -0.0673506283
+6      reshist_addr1_coi_ed_apenr  0.3791428204
+7     reshist_addr1_coi_ed_schpov -0.0008138100
+8       reshist_addr1_coi_he_rsei  0.0139791099
+9     reshist_addr1_coi_se_emprat  0.0034191200
+10    reshist_addr1_coi_se_public -0.0005086345
+11 reshist_addr1_svi_tot_20142018 -0.0716739287
+12   reshist_addr1_seg_ice_income  0.1597207837
+13   reshist_addr1_seg_ice_inc_bw  0.5092747383
+14            demo_mar_livingwith  0.0694567096
+15                demo_prnt_ed_v2  0.0322722296
+16               demo_prtnr_ed_v2  0.0717520185
+17               demo_fam_exp2_v2 -0.0056967435
+18               demo_fam_exp5_v2 -0.0110212920
+19           ksads_ptsd_raw_767_p  0.0994442184
+20            ksads_ptsd_thr_viol  0.0432569015
+21       famhx_ss_fath_prob_prf_p  0.0456420357
+22       famhx_ss_moth_prob_prf_p  0.0576232412
+23            asr_scr_attention_t  0.0231293893
+24                 pubertal_sex_p -0.1370985084
+25                   pds_p_ss_cat -0.0091448837
+26                   birth_weight  0.0841130422
+27                       devhx_10  0.0641460293
+28                   devhx_13_3_p -0.0001527399
+29                     devhx_18_p  0.0075921302
+30           physical_activity1_y  0.0181010151
+31          sai_p_activities___24  0.1144046786
+32                sai_p_perf_arts  0.2183416471
+33                      sai_p_any -0.5024449326
+34                  sds_p_ss_swtd  0.0008912915
+35             bis_y_ss_bas_drive -0.0061009577
+36     upps_y_ss_positive_urgency -0.0175483552
+37     upps_y_ss_negative_urgency -0.0107124297
+38     upps_y_ss_lack_of_planning  0.0055036270
+39    upps_y_ss_sensation_seeking  0.0103848806
+40          cbcl_scr_syn_anxdep_r  0.0040968287
+41          cbcl_scr_syn_social_r -0.0052744068
+42       cbcl_scr_syn_attention_r -0.0572614478
+43              num_close_friends -0.0015471139
+> 
+> lasso_pred <- predict(mod_cv,s=mod_cv$lambda.1se,newx=x,type="response")
+> summary(lasso_pred)
+       s1        
+ Min.   :0.0446  
+ 1st Qu.:0.1652  
+ Median :0.2401  
+ Mean   :0.2633  
+ 3rd Qu.:0.3393  
+ Max.   :0.7783  
+> hist(lasso_pred)
+> roc_test <- roc(y, lasso_pred, algorithm = 2) 
+Setting levels: control = 0, case = 1
+Setting direction: controls < cases
+Warning message:
+In roc.default(y, lasso_pred, algorithm = 2) :
+  Deprecated use a matrix as predictor. Unexpected results may be produced, please pass a numeric vector.
+> roc_test$auc
+Area under the curve: 0.7477
+> 
+> glm_cvxgboost = glm(data=d_flpov, formula(paste("resilience ~ ",paste(coefs$name, collapse ="+"), collapse = " ")), family="binomial")
+> 
+> obj<-summary(glm_cvxgboost)$coefficients
+> write.csv(obj,"/Users/Kat/Library/CloudStorage/OneDrive-HarvardUniversity/abcd_study_with_kat/results/INR_tert_cryst_cvLASSO_1ximp_coef_upd.csv")
+> 
+> 
+> pred <- predict(glm_cvxgboost, newdata=d_flpov, type="response")
+> roc_test <- roc(y, pred, algorithm = 2) 
+Setting levels: control = 0, case = 1
+Setting direction: controls < cases
+> roc_test$auc
+Area under the curve: 0.7612
+> 
+> proc.time()
+    user   system  elapsed 
+5898.983   52.980 2734.230 
